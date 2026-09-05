@@ -1,7 +1,9 @@
 """Business domain workflows and concurrency orchestration for Reservations and Bookings."""
 
+import contextlib
 import uuid
 from datetime import UTC, datetime, timedelta
+from typing import Any
 
 from pymongo.errors import DuplicateKeyError
 
@@ -54,11 +56,27 @@ class BookingService:
         therapist_repo: TherapistRepository,
         availability_service: AvailabilityService,
         settings: Settings,
+        session_service: Any = None,
     ) -> None:
         self.booking_repo = booking_repo
         self.therapist_repo = therapist_repo
         self.availability_service = availability_service
         self.settings = settings
+
+        if session_service is not None:
+            self.session_service = session_service
+        else:
+            from app.modules.session.session_repository import SessionRepository
+            from app.modules.session.session_service import SessionService
+            sess_repo = SessionRepository(booking_repo.db)
+            self.session_service = SessionService(
+                session_repo=sess_repo,
+                booking_repo=booking_repo,
+                therapist_repo=therapist_repo,
+                settings=settings,
+            )
+
+
 
     async def create_reservation(
         self, caller: UserInDB, req: CreateReservationRequest
@@ -316,7 +334,14 @@ class BookingService:
             reservation.id, ReservationStatus.CONVERTED
         )
 
+        # 7. Create scheduled session idempotently
+        if self.session_service:
+            with contextlib.suppress(Exception):
+                await self.session_service.create_session_for_booking(saved_booking)
+
         return BookingDetailResponse.from_db(saved_booking)
+
+
 
     async def list_client_bookings(
         self,
@@ -413,4 +438,12 @@ class BookingService:
                 code=ErrorCode.BOOKING_NOT_FOUND,
             )
 
+        if self.session_service:
+            with contextlib.suppress(Exception):
+                session = await self.session_service.session_repo.get_session_by_booking_id(booking_id)
+                if session:
+                    await self.session_service.session_repo.cancel_session(session.id)
+
         return BookingDetailResponse.from_db(updated)
+
+

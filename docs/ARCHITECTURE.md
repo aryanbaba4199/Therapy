@@ -233,3 +233,35 @@ To guarantee that two users attempting to book the same slot simultaneously cann
    - Fully localized in English (`en`), Malayalam (`ml`), and Tamil (`ta`).
    - Integrated `BookingCheckoutPage.tsx` with coupon code validation, package session credit redemption selector, payment method choices (UPI, Card, NetBanking), and order breakdown.
    - Catalog browsing via `/packages` (`PackageListPage.tsx`) and balance management via `/packages/my` (`MyPackagesPage.tsx`).
+
+---
+
+## 8. Phase 7 — Session Management & Therapist Portal Architecture
+
+### Domain Separation & Operational Lifecycle
+1. **Confirmed Booking to Scheduled Session Invariant**:
+   - The platform strictly maintains a **1:1 invariant** between a confirmed booking and an operational therapy session, enforced via a MongoDB unique index on `booking_id`.
+   - Upon booking confirmation (`confirm_booking`), `SessionService.create_session_for_booking()` is invoked idempotently to automatically instantiate the session in `SCHEDULED` status.
+   - If a booking is cancelled, `SessionService.cancel_session_for_booking()` transitions the operational session directly to `CANCELLED`.
+2. **Session Lifecycle State Machine**:
+   - `scheduled`: Session is confirmed and awaiting its scheduled time window.
+   - `ready`: Within the pre-session startup window (`session_start_window_minutes = 15`).
+   - `in_progress`: Therapist has initiated the session (`start_session_atomic`). Concurrency-safe atomic transition ensures that concurrent calls can only start the session once.
+   - `completed`: Therapist finishes the consultation (`complete_session_atomic`), setting `ended_at` timestamp.
+   - `cancelled` / `no_show`: Terminal states for unattended or cancelled consultations.
+3. **Clinical Notes Isolation & Strict Privacy Boundary**:
+   - Decoupled `session_notes` collection separate from `sessions` to enforce least-privilege data isolation and clinical confidentiality.
+   - Notes consist of two distinct fields:
+     - `summary`: High-level consultation overview, takeaways, and recommended homework visible to both client and therapist.
+     - `private_notes`: Highly confidential clinical hypotheses, diagnostic considerations, and observations accessible **exclusively** to the assigned therapist and authorized clinical admins.
+   - The client endpoint `/api/v1/sessions/{id}/notes/client` uses `ClientSessionNoteResponse` which completely omits `private_notes`.
+   - IDOR prevention: All mutations and reads verify that caller is the session's assigned therapist or has admin roles.
+4. **Therapy Goals System**:
+   - Client goal management (`therapy_goals` collection) tracks progress across consultations with statuses: `active`, `completed`, and `archived`.
+   - Therapists can define action plans, milestones, and homework strategies linked to the client and session.
+5. **Therapist Portal UI**:
+   - `/therapist/dashboard`: Operational hub featuring real-time metrics (Today's Agenda, Upcoming, Completed), live session controls (Start/Complete), and quick attendance recording modal.
+   - `/therapist/sessions`: Comprehensive filterable consultation ledger by status and date with pagination.
+   - `/therapist/sessions/:id`: Deep session detail view with session metadata, attendance controls, Clinical Notes editor (with clear confidentiality badges), and Therapy Goals management.
+   - `/my-sessions`: Client-facing consultation history displaying session status, schedule, mode, and shared summary notes (with zero exposure to private notes).
+   - 100% trilingual localization across English (`en`), Malayalam (`ml`), and Tamil (`ta`).

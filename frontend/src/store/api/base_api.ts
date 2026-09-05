@@ -78,6 +78,9 @@ export const baseApi = createApi({
     "Offer",
     "Payment",
     "Session",
+    "SessionNote",
+    "TherapyGoal",
+    "TherapistDashboard",
   ],
   endpoints: () => ({}),
 });

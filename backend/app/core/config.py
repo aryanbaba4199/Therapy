@@ -64,6 +64,15 @@ class Settings(BaseSettings):
         default="mock_webhook_secret_key_therapy_2026", alias="PAYMENT_WEBHOOK_SECRET"
     )
 
+    # Session & Operational Runtime settings
+    session_start_window_minutes: int = Field(
+        default=15, alias="SESSION_START_WINDOW_MINUTES"
+    )
+    session_grace_period_minutes: int = Field(
+        default=60, alias="SESSION_GRACE_PERIOD_MINUTES"
+    )
+
+
     # Cookie settings for Refresh Token
     refresh_cookie_name: str = Field(default="oppam_refresh_token", alias="REFRESH_COOKIE_NAME")
 

@@ -7,7 +7,7 @@ import { useAuth } from "@/features/auth/hooks/useAuth";
 
 export const MainLayout: React.FC = () => {
   const { t } = useTranslation();
-  const { user, isAuthenticated, logout } = useAuth();
+  const { user, isAuthenticated, logout, hasRole } = useAuth();
 
   return (
     <div className="min-h-screen flex flex-col bg-white text-oppam-black font-sans">
@@ -60,12 +60,29 @@ export const MainLayout: React.FC = () => {
 
             {isAuthenticated ? (
               <div className="flex items-center gap-3">
-                <Link
-                  to="/bookings"
-                  className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold text-teal-800 hover:bg-teal-50 transition-colors"
-                >
-                  <span>My Bookings</span>
-                </Link>
+                {hasRole("therapist") ? (
+                  <Link
+                    to="/therapist/dashboard"
+                    className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold text-teal-900 bg-teal-100/70 hover:bg-teal-200 transition-colors"
+                  >
+                    <span>Therapist Portal</span>
+                  </Link>
+                ) : (
+                  <>
+                    <Link
+                      to="/my-sessions"
+                      className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold text-teal-800 hover:bg-teal-50 transition-colors"
+                    >
+                      <span>My Sessions</span>
+                    </Link>
+                    <Link
+                      to="/bookings"
+                      className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold text-teal-800 hover:bg-teal-50 transition-colors"
+                    >
+                      <span>My Bookings</span>
+                    </Link>
+                  </>
+                )}
                 <Link
                   to="/profile"
                   className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-neutral-100 hover:bg-neutral-200 text-xs font-bold text-oppam-dark transition-colors"

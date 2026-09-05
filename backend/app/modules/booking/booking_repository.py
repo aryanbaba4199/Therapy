@@ -18,8 +18,10 @@ class BookingRepository:
     BOOKINGS_COLLECTION = "bookings"
 
     def __init__(self, db: AsyncIOMotorDatabase[dict[str, Any]]) -> None:
+        self.db = db
         self.reservations = db[self.RESERVATIONS_COLLECTION]
         self.bookings = db[self.BOOKINGS_COLLECTION]
+
 
     async def ensure_indexes(self) -> None:
         """Create query and uniqueness constraints for concurrency protection."""

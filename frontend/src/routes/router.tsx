@@ -14,7 +14,14 @@ import {
 } from "../features/booking";
 import { PackageListPage, MyPackagesPage } from "../features/package";
 import { ProfilePage } from "../features/user/pages/ProfilePage";
+import {
+  ClientSessionHistoryPage,
+  TherapistDashboardPage,
+  TherapistSessionDetailPage,
+  TherapistSessionListPage,
+} from "../features/session";
 import { ProtectedRoute } from "./protected_route";
+import { RoleProtectedRoute } from "./role_protected_route";
 
 export const router = createBrowserRouter([
   {
@@ -75,6 +82,31 @@ export const router = createBrowserRouter([
           {
             path: "bookings/:id",
             element: <BookingDetailPage />,
+          },
+          {
+            path: "my-sessions",
+            element: <ClientSessionHistoryPage />,
+          },
+          {
+            element: (
+              <RoleProtectedRoute
+                allowedRoles={["therapist", "admin", "super_admin"]}
+              />
+            ),
+            children: [
+              {
+                path: "therapist/dashboard",
+                element: <TherapistDashboardPage />,
+              },
+              {
+                path: "therapist/sessions",
+                element: <TherapistSessionListPage />,
+              },
+              {
+                path: "therapist/sessions/:sessionId",
+                element: <TherapistSessionDetailPage />,
+              },
+            ],
           },
         ],
       },
