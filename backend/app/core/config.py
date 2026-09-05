@@ -58,6 +58,12 @@ class Settings(BaseSettings):
         default=900, alias="BOOKING_RESERVATION_TTL_SECONDS"
     )
 
+    # Payment & Gateway settings
+    payment_provider: str = Field(default="mock", alias="PAYMENT_PROVIDER")
+    payment_webhook_secret: str = Field(
+        default="mock_webhook_secret_key_therapy_2026", alias="PAYMENT_WEBHOOK_SECRET"
+    )
+
     # Cookie settings for Refresh Token
     refresh_cookie_name: str = Field(default="oppam_refresh_token", alias="REFRESH_COOKIE_NAME")
 

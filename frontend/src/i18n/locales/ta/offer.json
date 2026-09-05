@@ -1,0 +1,13 @@
+{
+  "haveCoupon": "கூப்பன் குறியீடு உள்ளதா?",
+  "applyCoupon": "கூப்பனைப் பயன்படுத்துங்கள்",
+  "couponCodePlaceholder": "குறியீட்டை உள்ளிடவும் (எ.கா. WELCOME20)",
+  "apply": "பயன்படுத்து",
+  "remove": "நீக்கு",
+  "couponApplied": "'{{code}}' கூப்பன் வெற்றிகரமாக சேர்க்கப்பட்டது!",
+  "availableCoupons": "கிடைக்கும் சலுகைகள்",
+  "minSpend": "குறைந்தபட்ச தொகை ₹{{amount}}",
+  "saveUpTo": "₹{{amount}} வரை சேமிக்கவும்",
+  "validUntil": "{{date}} வரை செல்லுபடியாகும்",
+  "expiresSoon": "விரைவில் முடிவடையும்"
+}

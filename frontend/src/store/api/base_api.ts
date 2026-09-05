@@ -74,6 +74,8 @@ export const baseApi = createApi({
     "Booking",
     "Reservation",
     "Package",
+    "UserPackage",
+    "Offer",
     "Payment",
     "Session",
   ],

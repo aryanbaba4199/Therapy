@@ -1,0 +1,13 @@
+{
+  "haveCoupon": "കൂപ്പൺ കോഡ് ഉണ്ടോ?",
+  "applyCoupon": "കൂപ്പൺ ചേർക്കുക",
+  "couponCodePlaceholder": "കോഡ് നൽകുക (ഉദാ: WELCOME20)",
+  "apply": "ചേർക്കുക",
+  "remove": "നീക്കംചെയ്യുക",
+  "couponApplied": "'{{code}}' കൂപ്പൺ വിജയകരമായി ചേർത്തു!",
+  "availableCoupons": "ലഭ്യമായ ഓഫറുകൾ",
+  "minSpend": "കുറഞ്ഞ തുക ₹{{amount}}",
+  "saveUpTo": "₹{{amount}} വരെ ലാഭിക്കാം",
+  "validUntil": "{{date}} വരെ സാധുവാണ്",
+  "expiresSoon": "ഉടൻ അവസാനിക്കും"
+}

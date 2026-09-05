@@ -15,6 +15,8 @@ import enAvailability from "./locales/en/availability.json";
 import enBooking from "./locales/en/booking.json";
 import enCommon from "./locales/en/common.json";
 import enNavigation from "./locales/en/navigation.json";
+import enOffer from "./locales/en/offer.json";
+import enPayment from "./locales/en/payment.json";
 import enTherapist from "./locales/en/therapist.json";
 import enValidation from "./locales/en/validation.json";
 
@@ -23,6 +25,8 @@ import mlAvailability from "./locales/ml/availability.json";
 import mlBooking from "./locales/ml/booking.json";
 import mlCommon from "./locales/ml/common.json";
 import mlNavigation from "./locales/ml/navigation.json";
+import mlOffer from "./locales/ml/offer.json";
+import mlPayment from "./locales/ml/payment.json";
 import mlTherapist from "./locales/ml/therapist.json";
 import mlValidation from "./locales/ml/validation.json";
 
@@ -31,6 +35,8 @@ import taAvailability from "./locales/ta/availability.json";
 import taBooking from "./locales/ta/booking.json";
 import taCommon from "./locales/ta/common.json";
 import taNavigation from "./locales/ta/navigation.json";
+import taOffer from "./locales/ta/offer.json";
+import taPayment from "./locales/ta/payment.json";
 import taTherapist from "./locales/ta/therapist.json";
 import taValidation from "./locales/ta/validation.json";
 
@@ -43,6 +49,8 @@ export const resources = {
     therapist: enTherapist,
     availability: enAvailability,
     booking: enBooking,
+    payment: enPayment,
+    offer: enOffer,
   },
   ml: {
     common: mlCommon,
@@ -52,6 +60,8 @@ export const resources = {
     therapist: mlTherapist,
     availability: mlAvailability,
     booking: mlBooking,
+    payment: mlPayment,
+    offer: mlOffer,
   },
   ta: {
     common: taCommon,
@@ -61,6 +71,8 @@ export const resources = {
     therapist: taTherapist,
     availability: taAvailability,
     booking: taBooking,
+    payment: taPayment,
+    offer: taOffer,
   },
 } as const;
 

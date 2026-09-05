@@ -12,6 +12,7 @@ import {
   BookingDetailPage,
   BookingHistoryPage,
 } from "../features/booking";
+import { PackageListPage, MyPackagesPage } from "../features/package";
 import { ProfilePage } from "../features/user/pages/ProfilePage";
 import { ProtectedRoute } from "./protected_route";
 
@@ -41,11 +42,19 @@ export const router = createBrowserRouter([
         element: <TherapistDetailPage />,
       },
       {
+        path: "packages",
+        element: <PackageListPage />,
+      },
+      {
         element: <ProtectedRoute />,
         children: [
           {
             path: "profile",
             element: <ProfilePage />,
+          },
+          {
+            path: "packages/my",
+            element: <MyPackagesPage />,
           },
           {
             path: "therapist/schedule",

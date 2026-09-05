@@ -207,3 +207,29 @@ To guarantee that two users attempting to book the same slot simultaneously cann
    - Confirmed bookings can be cancelled with an optional cancellation reason.
    - Strictly prepared for Phase 6 (Payment & Offers) with zero payment leakage.
 
+---
+
+## 7. Phase 6 — Payments, Offers & Packages Architecture
+
+### Domain Flow & Commercial Invariants
+1. **Commercial Precision & Currency Handling**:
+   - All financial amounts are strictly stored and computed in **integer minor units** (e.g. ₹1,000 = `100000` paise).
+   - Zero floating-point arithmetic in monetary balance calculations to prevent fractional cent/paise rounding bugs.
+2. **Authoritative Server-Side Price Calculation**:
+   - `OfferService.calculate_pricing()` authoritatively computes base price, discounts, and final payable amount.
+   - Percentage discounts are capped at `max_discount_minor` if set.
+   - Minimum order requirements (`min_order_minor`) are strictly enforced before applying any discount.
+   - Atomic coupon redemption: `OfferRepository.increment_usage_atomic()` enforces per-user and global usage quotas.
+3. **Package Bundles & Atomic Session Balances**:
+   - `PackageProductInDB`: Sellable catalog templates (e.g., "5 Sessions Wellness Bundle").
+   - `UserPackageInDB`: Entitlement records created upon verified payment, tracking `total_sessions`, `remaining_sessions`, and expiration timestamp.
+   - `PackageRepository.consume_session_atomic()`: Executes atomic `find_one_and_update` on MongoDB with condition `remaining_sessions > 0 and status == "active" and expires_at >= now`. When balance hits 0, package automatically transitions to `exhausted`. Tested under concurrent contention: exactly 1 request succeeds, subsequent ones fail cleanly.
+   - When redeeming package sessions for booking, payable amount is ₹0, payment method is marked `package_redemption`, and booking confirms immediately without gateway interaction.
+4. **Provider Abstraction & Cryptographic Verification**:
+   - `PaymentProvider`: Base interface defining `create_order`, `verify_payment_signature`, and `verify_webhook_signature`.
+   - `MockPaymentProvider`: Deterministic HMAC-SHA256 signature generator and validator for local development and CI testing.
+   - Webhook processing: Validates incoming HMAC signatures against `PAYMENT_WEBHOOK_SECRET` and reconciles pending payments idempotently.
+5. **Frontend Commerce Integration**:
+   - Fully localized in English (`en`), Malayalam (`ml`), and Tamil (`ta`).
+   - Integrated `BookingCheckoutPage.tsx` with coupon code validation, package session credit redemption selector, payment method choices (UPI, Card, NetBanking), and order breakdown.
+   - Catalog browsing via `/packages` (`PackageListPage.tsx`) and balance management via `/packages/my` (`MyPackagesPage.tsx`).

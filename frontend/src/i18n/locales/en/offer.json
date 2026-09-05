@@ -1,0 +1,13 @@
+{
+  "haveCoupon": "Have a coupon code?",
+  "applyCoupon": "Apply Coupon",
+  "couponCodePlaceholder": "Enter coupon (e.g. WELCOME20)",
+  "apply": "Apply",
+  "remove": "Remove",
+  "couponApplied": "Coupon '{{code}}' applied successfully!",
+  "availableCoupons": "Available Offers & Coupons",
+  "minSpend": "Min order ₹{{amount}}",
+  "saveUpTo": "Save up to ₹{{amount}}",
+  "validUntil": "Valid till {{date}}",
+  "expiresSoon": "Expires soon"
+}
