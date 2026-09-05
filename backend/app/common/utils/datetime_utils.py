@@ -13,3 +13,10 @@ def to_utc_iso(dt: datetime) -> str:
     if dt.tzinfo is None:
         dt = dt.replace(tzinfo=UTC)
     return dt.astimezone(UTC).isoformat()
+
+
+def ensure_utc(dt: datetime) -> datetime:
+    """Ensure datetime has UTC tzinfo, assuming naive datetimes are in UTC."""
+    if dt.tzinfo is None:
+        return dt.replace(tzinfo=UTC)
+    return dt.astimezone(UTC)

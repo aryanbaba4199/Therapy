@@ -8,12 +8,15 @@ os.environ["DEBUG"] = "true"
 os.environ["MONGODB_DATABASE"] = "oppam_therapy_test"
 
 from collections.abc import AsyncIterator  # noqa: E402
+from typing import Any
 
 import pytest  # noqa: E402
 from fastapi import FastAPI  # noqa: E402
 from httpx import ASGITransport, AsyncClient  # noqa: E402
+from mongomock_motor import AsyncMongoMockClient  # noqa: E402
 
 from app.core.config import Settings, get_settings  # noqa: E402
+from app.database.mongodb import get_database  # noqa: E402
 from app.main import create_app  # noqa: E402
 
 
@@ -24,9 +27,18 @@ def settings() -> Settings:
 
 
 @pytest.fixture
-def app() -> FastAPI:
-    """Return a fresh FastAPI application instance for each test."""
-    return create_app()
+def mock_db() -> Any:
+    """Provide isolated in-memory MongoMock database for testing."""
+    client: Any = AsyncMongoMockClient()
+    return client["oppam_therapy_test"]
+
+
+@pytest.fixture
+def app(mock_db: Any) -> FastAPI:
+    """Return a fresh FastAPI application instance with mocked database."""
+    app_instance = create_app()
+    app_instance.dependency_overrides[get_database] = lambda: mock_db
+    return app_instance
 
 
 @pytest.fixture

@@ -1,2 +1,10 @@
-// Feature module placeholder
-export type {};
+export * from "./types/auth.types";
+export * from "./api/auth_api";
+export * from "./store/auth_slice";
+export * from "./hooks/useAuth";
+export * from "./components/LoginForm";
+export * from "./components/OtpForm";
+export * from "./components/RegisterForm";
+export * from "./components/AuthInitializer";
+export * from "./pages/LoginPage";
+export * from "./pages/RegisterPage";

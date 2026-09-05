@@ -122,3 +122,37 @@ class ValidationException(AppException):
             status_code=422,
             details=details,
         )
+
+
+class BadRequestException(AppException):
+    """Exception raised for general malformed or illegal client operations."""
+
+    def __init__(
+        self,
+        message: str = "Bad request",
+        code: ErrorCode | str = ErrorCode.BAD_REQUEST,
+        details: Any | None = None,
+    ) -> None:
+        super().__init__(
+            message=message,
+            code=code,
+            status_code=400,
+            details=details,
+        )
+
+
+class RateLimitedException(AppException):
+    """Exception raised when client exceeds rate limits or cooldown periods."""
+
+    def __init__(
+        self,
+        message: str = "Too many requests. Please slow down.",
+        code: ErrorCode | str = ErrorCode.AUTH_OTP_RATE_LIMITED,
+        details: Any | None = None,
+    ) -> None:
+        super().__init__(
+            message=message,
+            code=code,
+            status_code=429,
+            details=details,
+        )

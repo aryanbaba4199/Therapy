@@ -3,9 +3,11 @@ import { Outlet, Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { FiPhone, FiMail, FiMapPin, FiHeart } from "react-icons/fi";
 import { LanguageSwitcher } from "@/common/components/language_switcher";
+import { useAuth } from "@/features/auth/hooks/useAuth";
 
 export const MainLayout: React.FC = () => {
   const { t } = useTranslation();
+  const { user, isAuthenticated, logout } = useAuth();
 
   return (
     <div className="min-h-screen flex flex-col bg-white text-oppam-black font-sans">
@@ -50,12 +52,33 @@ export const MainLayout: React.FC = () => {
           <div className="flex items-center gap-4">
             <LanguageSwitcher />
 
-            <button
-              type="button"
-              className="hidden sm:inline-flex items-center justify-center px-5 py-2.5 rounded-full bg-oppam-dark text-white hover:bg-neutral-800 text-xs font-bold uppercase tracking-wider transition-colors shadow-sm"
-            >
-              {t("auth.login")}
-            </button>
+            {isAuthenticated ? (
+              <div className="flex items-center gap-3">
+                <Link
+                  to="/profile"
+                  className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-neutral-100 hover:bg-neutral-200 text-xs font-bold text-oppam-dark transition-colors"
+                >
+                  <span className="w-6 h-6 rounded-full bg-oppam-yellow flex items-center justify-center font-bold text-[10px]">
+                    {user?.first_name?.[0]?.toUpperCase() || "U"}
+                  </span>
+                  <span>{user?.first_name || t("auth.profile")}</span>
+                </Link>
+                <button
+                  type="button"
+                  onClick={() => void logout()}
+                  className="hidden sm:inline-flex items-center justify-center px-4 py-2 rounded-full border border-gray-300 text-gray-700 hover:bg-gray-50 text-xs font-bold tracking-wider transition-colors"
+                >
+                  {t("auth.logout")}
+                </button>
+              </div>
+            ) : (
+              <Link
+                to="/login"
+                className="hidden sm:inline-flex items-center justify-center px-5 py-2.5 rounded-full bg-oppam-dark text-white hover:bg-neutral-800 text-xs font-bold uppercase tracking-wider transition-colors shadow-sm"
+              >
+                {t("auth.login")}
+              </Link>
+            )}
           </div>
         </div>
       </header>

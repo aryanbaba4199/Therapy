@@ -48,6 +48,23 @@ class Settings(BaseSettings):
     )
     jwt_refresh_token_expire_days: int = Field(default=7, alias="JWT_REFRESH_TOKEN_EXPIRE_DAYS")
 
+    # OTP settings
+    otp_length: int = Field(default=4, alias="OTP_LENGTH")
+    otp_expire_seconds: int = Field(default=300, alias="OTP_EXPIRE_SECONDS")
+    otp_resend_cooldown_seconds: int = Field(default=30, alias="OTP_RESEND_COOLDOWN_SECONDS")
+    otp_max_attempts: int = Field(default=5, alias="OTP_MAX_ATTEMPTS")
+    otp_provider: Literal["mock", "sms", "whatsapp"] = Field(default="mock", alias="OTP_PROVIDER")
+
+    # Cookie settings for Refresh Token
+    refresh_cookie_name: str = Field(default="oppam_refresh_token", alias="REFRESH_COOKIE_NAME")
+    refresh_cookie_secure: bool = Field(default=False, alias="REFRESH_COOKIE_SECURE")
+    refresh_cookie_samesite: Literal["lax", "strict", "none"] = Field(
+        default="lax", alias="REFRESH_COOKIE_SAMESITE"
+    )
+    refresh_cookie_httponly: bool = Field(default=True, alias="REFRESH_COOKIE_HTTPONLY")
+    refresh_cookie_domain: str | None = Field(default=None, alias="REFRESH_COOKIE_DOMAIN")
+    refresh_cookie_path: str = Field(default="/api/v1/auth", alias="REFRESH_COOKIE_PATH")
+
     # Logging settings
     log_level: str = Field(default="INFO", alias="LOG_LEVEL")
     log_json_format: bool = Field(default=False, alias="LOG_JSON_FORMAT")
