@@ -37,6 +37,12 @@ export const MainLayout: React.FC = () => {
             >
               {t("navigation.home")}
             </Link>
+            <Link
+              to="/therapists"
+              className="text-sm font-semibold text-gray-700 hover:text-oppam-dark transition-colors"
+            >
+              {t("navigation.therapists")}
+            </Link>
             <span className="text-sm font-semibold text-gray-400 cursor-not-allowed">
               {t("navigation.services")}
             </span>

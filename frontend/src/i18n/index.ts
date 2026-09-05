@@ -13,16 +13,19 @@ import {
 import enAuth from "./locales/en/auth.json";
 import enCommon from "./locales/en/common.json";
 import enNavigation from "./locales/en/navigation.json";
+import enTherapist from "./locales/en/therapist.json";
 import enValidation from "./locales/en/validation.json";
 
 import mlAuth from "./locales/ml/auth.json";
 import mlCommon from "./locales/ml/common.json";
 import mlNavigation from "./locales/ml/navigation.json";
+import mlTherapist from "./locales/ml/therapist.json";
 import mlValidation from "./locales/ml/validation.json";
 
 import taAuth from "./locales/ta/auth.json";
 import taCommon from "./locales/ta/common.json";
 import taNavigation from "./locales/ta/navigation.json";
+import taTherapist from "./locales/ta/therapist.json";
 import taValidation from "./locales/ta/validation.json";
 
 export const resources = {
@@ -31,18 +34,21 @@ export const resources = {
     navigation: enNavigation,
     auth: enAuth,
     validation: enValidation,
+    therapist: enTherapist,
   },
   ml: {
     common: mlCommon,
     navigation: mlNavigation,
     auth: mlAuth,
     validation: mlValidation,
+    therapist: mlTherapist,
   },
   ta: {
     common: taCommon,
     navigation: taNavigation,
     auth: taAuth,
     validation: taValidation,
+    therapist: taTherapist,
   },
 } as const;
 

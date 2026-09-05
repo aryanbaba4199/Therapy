@@ -1,2 +1,11 @@
-// Feature module placeholder
-export type {};
+export * from "./types/therapist.types";
+export * from "./api/therapist_api";
+export * from "./hooks/useTherapists";
+export * from "./components/TherapistBadges";
+export * from "./components/TherapistAudioPlayer";
+export * from "./components/TherapistCard";
+export * from "./components/TherapistSearch";
+export * from "./components/TherapistSort";
+export * from "./components/TherapistFilters";
+export * from "./pages/TherapistListPage";
+export * from "./pages/TherapistDetailPage";
