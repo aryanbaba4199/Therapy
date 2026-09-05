@@ -1,0 +1,36 @@
+{
+  "appName": "Oppam",
+  "tagline": "Kerala's First 24/7 Online Counselling Platform",
+  "bookNow": "Book Now",
+  "consultTherapist": "Consult a Therapist",
+  "onlineTherapy": "24x7 Online Therapy",
+  "therapyHours": "50,000+ therapy hours",
+  "verifiedTherapists": "120+ Verified Psychologists",
+  "save": "Save",
+  "cancel": "Cancel",
+  "close": "Close",
+  "loading": "Loading...",
+  "retry": "Retry",
+  "submit": "Submit",
+  "back": "Back",
+  "next": "Next",
+  "confirm": "Confirm",
+  "status": "Status",
+  "healthy": "Healthy",
+  "degraded": "Degraded",
+  "systemStatus": "System Status",
+  "selectLanguage": "Select Language",
+  "languages": {
+    "en": "English",
+    "ml": "മലയാളം",
+    "ta": "தமிழ்"
+  },
+  "footer": {
+    "copyright": "© 2026 Oppam Wellness Private Ltd. All rights reserved.",
+    "addressTitle": "Headquarters",
+    "address": "3rd Floor, Multi Arcade, Mini Bypass Road, Karaparamba, Kozhikode, Kerala 673010",
+    "contact": "Contact",
+    "phone": "+91 85909 25353",
+    "email": "help@oppam.me"
+  }
+}

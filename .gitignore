@@ -1,0 +1,25 @@
+# Environments & Dependencies
+node_modules/
+.venv/
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+dist/
+build/
+.dist/
+.env
+
+# Tooling caches
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+*.tsbuildinfo
+.eslintcache
+
+# Logs & System
+*.log
+.DS_Store
+
+# Research artifacts
+.research/
