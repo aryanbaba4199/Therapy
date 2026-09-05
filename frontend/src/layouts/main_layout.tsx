@@ -60,14 +60,26 @@ export const MainLayout: React.FC = () => {
 
             {isAuthenticated ? (
               <div className="flex items-center gap-3">
-                {hasRole("therapist") ? (
+                {hasRole("therapist") && (
                   <Link
                     to="/therapist/dashboard"
                     className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold text-teal-900 bg-teal-100/70 hover:bg-teal-200 transition-colors"
                   >
                     <span>Therapist Portal</span>
                   </Link>
-                ) : (
+                )}
+                {(hasRole("staff") ||
+                  hasRole("first_responder") ||
+                  hasRole("admin") ||
+                  hasRole("super_admin")) && (
+                  <Link
+                    to="/operations/dashboard"
+                    className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold text-purple-900 bg-purple-100/70 hover:bg-purple-200 transition-colors"
+                  >
+                    <span>Operations Hub</span>
+                  </Link>
+                )}
+                {!hasRole("therapist") && (
                   <>
                     <Link
                       to="/my-sessions"

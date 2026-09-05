@@ -1,0 +1,52 @@
+{
+  "operationsPortal": "செயல்பாடுகள் & நிர்வாக மையம்",
+  "firstResponderHub": "முதல் பதிலளிப்பவர் மையம்",
+  "dashboard": "டாஷ்போர்டு",
+  "users": "பயனர் மேலாண்மை",
+  "therapists": "சிகிச்சையாளர் சரிபார்ப்பு",
+  "bookings": "முன்பதிவுகள்",
+  "payments": "கட்டண பேரேடு",
+  "leads": "லீட்கள் மேலாண்மை",
+  "auditLogs": "தணிக்கை பதிவு",
+  "metrics": {
+    "todayBookings": "இன்றைய முன்பதிவுகள்",
+    "upcomingSessions": "வரவிருக்கும் அமர்வுகள்",
+    "completedSessions": "முடிந்த அமர்வுகள்",
+    "activeTherapists": "செயலில் உள்ள சிகிச்சையாளர்கள்",
+    "pendingVerifications": "சரிபார்ப்பு நிலுவையில் உள்ளவை",
+    "pendingTickets": "நிலுவையில் உள்ள ஆதரவு வழக்குகள்",
+    "failedPayments": "தோல்வியுற்ற கட்டணங்கள்",
+    "totalRevenue": "மொத்த வருவாய்",
+    "newLeads": "புதிய லீட்கள்"
+  },
+  "userTable": {
+    "name": "பெயர்",
+    "email": "மின்னஞ்சல்",
+    "phone": "தொலைபேசி",
+    "roles": "பங்குகள்",
+    "status": "நிலை",
+    "actions": "செயல்கள்",
+    "activate": "செயல்படுத்து",
+    "suspend": "தற்காலிகமாக நிறுத்து",
+    "manageRoles": "பங்குகளை மாற்று"
+  },
+  "leadTable": {
+    "name": "பெயர்",
+    "contact": "தொடர்பு",
+    "source": "மூலம்",
+    "status": "நிலை",
+    "assignedTo": "ஒதுக்கப்பட்ட ஊழியர்",
+    "lastContact": "கடைசியாக தொடர்பு கொண்டது",
+    "nextFollowUp": "அடுத்த பின்தொடர்தல்",
+    "createLead": "புதிய லீட் உருவாக்கு",
+    "assign": "ஒதுக்கு",
+    "convert": "வாடிக்கையாளராக மாற்று"
+  },
+  "auditTable": {
+    "timestamp": "நேரம்",
+    "actor": "செய்தவர்",
+    "action": "செயல்",
+    "resource": "இலக்கு",
+    "metadata": "விவரங்கள்"
+  }
+}

@@ -313,3 +313,71 @@ To guarantee that two users attempting to book the same slot simultaneously cann
      - Integrated into `MainLayout.tsx` header navigation and React Router.
      - 100% trilingual localization in English (`en`), Malayalam (`ml`), and Tamil (`ta`).
      - Zero TypeScript errors (`npm run type-check`), zero lint violations (`npm run lint`), Prettier formatted (`npm run format:check`), and production build passing (`npm run build`).
+
+---
+
+## 10. Phase 9 — Operations, Administration & First Responder Architecture
+
+### Domain Overview & Operational Design
+1. **Role & Permission Model**:
+   - **Extended Role Enumeration**: `UserRole` contains `user`, `therapist`, `staff`, `first_responder`, `admin`, and `super_admin`.
+   - **Granular Permissions Architecture**: `Permission` enum defines explicit actions across 7 capability domains:
+     - Dashboard: `dashboard:view`
+     - Users: `users:read`, `users:update`, `users:suspend`, `roles:manage`
+     - Therapists: `therapists:read`, `therapists:verify`, `therapists:manage`
+     - Bookings & Sessions: `bookings:read`, `bookings:manage`, `sessions:read`
+     - Payments & Commercial: `payments:read`, `offers:manage`, `packages:manage`
+     - Support: `support:read`, `support:assign`, `support:resolve`, `support:escalate`
+     - Leads: `leads:read`, `leads:manage`, `leads:assign`
+     - Moderation: `reviews:moderate`
+     - Audit: `audit:read`
+   - **Deterministic Mapping**: `ROLE_PERMISSIONS` dictionary maps roles to allowed permission sets. `super_admin` has universal access; `admin` has operational oversight; `staff` has read and support execution privileges; `first_responder` specializes in prospect triage and ticket escalation.
+
+2. **Operational Dashboard Aggregations**:
+   - High-level platform health metrics are computed using targeted MongoDB index scans and aggregation pipelines:
+     - `today_bookings`: Bookings created between 00:00:00 and 23:59:59 today.
+     - `upcoming_sessions`: Consultations in `scheduled` or `ready` status with `start_at >= now()`.
+     - `completed_sessions`: Lifetime successfully held sessions.
+     - `active_therapists` & `pending_verification_therapists`: Licensed vs onboarding clinical capacity.
+     - `pending_support_tickets`: Unresolved inquiries in `open`, `in_progress`, or `waiting_for_user`.
+     - `failed_payments_count`: Transactions flagged as failed for commercial triage.
+     - `total_revenue_minor`: `$sum` aggregation across all `paid` payment transactions.
+     - `new_leads_count`: Prospective leads awaiting initial contact.
+
+3. **User Management & Destructive Protection**:
+   - Operational endpoints allow staff/admin to search and filter platform users by role and status.
+   - **Super Admin Protection**:
+     - Non-super admins cannot suspend Super Admin accounts.
+     - Elevating users to `admin` or `super_admin`, or modifying Super Admin roles, strictly requires caller to hold `super_admin`.
+     - Non-compliance fails with `403 Forbidden` (`OPS_ROLE_CHANGE_FORBIDDEN`).
+
+4. **First Responder Triage & Lead Lifecycle**:
+   - `leads` collection tracks prospective inquiries prior to account registration:
+     - Status State Machine: `new` &rarr; `contacted` (auto-records `last_contacted_at`) &rarr; `follow_up` &rarr; `converted` &rarr; `lost`.
+     - Acquisition Sources: `website`, `helpline`, `referral`, `campaign`, `other`.
+     - Assignment & Handoffs: Leads can be assigned and reassigned between staff and first responders with mandatory reason logging.
+     - Conversion: Seamless transition linking `converted_user_id` to an existing client user record.
+
+5. **Immutable Operational Audit Trail**:
+   - `audit_logs` collection provides an append-only ledger of privileged administrative mutations.
+   - Every state-altering action emits an audit record capturing:
+     - `actor_id` and `actor_role`
+     - `action` (`AuditAction` enum)
+     - `resource_type` and `resource_id`
+     - Sanitized `metadata` (capturing previous vs new states and operational reasons without secrets/PII)
+     - Distributed trace `request_id` from ContextVar middleware
+     - UTC `created_at` timestamp
+   - Read-only queries supported by indexes on `(created_at DESC)`, `(actor_id, created_at)`, `(resource_type, resource_id, created_at)`.
+
+6. **Frontend Operations UI**:
+   - Route Protection: `/operations/*` protected by `RoleProtectedRoute` admitting `staff`, `first_responder`, `admin`, and `super_admin`.
+   - Pages Built:
+     - `AdminDashboardPage.tsx`: Metric indicators and live counters.
+     - `UserManagementPage.tsx`: Searchable user table, status modal (suspend/activate), and role assignment dialog.
+     - `TherapistOperationsPage.tsx`: Practitioner verification queue with credential review.
+     - `LeadManagementPage.tsx`: Inbound triage ledger, create lead dialog, assign agent, and convert to client.
+     - `BookingOperationsPage.tsx`: Cross-cutting appointment ledger with client/therapist lookups.
+     - `PaymentOperationsPage.tsx`: Commercial ledger with failure diagnostics and transaction codes.
+     - `FirstResponderDashboardPage.tsx`: Crisis triage queue and incoming lead cards.
+     - `AuditLogPage.tsx`: Chronological audit trail table with metadata inspection.
+   - Fully localized in English (`en`), Malayalam (`ml`), and Tamil (`ta`) (`operations.json`).

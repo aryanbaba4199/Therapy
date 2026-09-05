@@ -1,0 +1,52 @@
+{
+  "operationsPortal": "Operations & Admin Hub",
+  "firstResponderHub": "First Responder Triage",
+  "dashboard": "Dashboard",
+  "users": "User Management",
+  "therapists": "Therapist Verification",
+  "bookings": "Bookings Oversight",
+  "payments": "Payment Ledger",
+  "leads": "Lead Management",
+  "auditLogs": "Audit Trail",
+  "metrics": {
+    "todayBookings": "Today's Bookings",
+    "upcomingSessions": "Upcoming Sessions",
+    "completedSessions": "Completed Sessions",
+    "activeTherapists": "Active Therapists",
+    "pendingVerifications": "Pending Verifications",
+    "pendingTickets": "Pending Support Cases",
+    "failedPayments": "Failed Payments",
+    "totalRevenue": "Total Revenue",
+    "newLeads": "New Prospective Leads"
+  },
+  "userTable": {
+    "name": "Name",
+    "email": "Email",
+    "phone": "Phone",
+    "roles": "Roles",
+    "status": "Status",
+    "actions": "Actions",
+    "activate": "Activate",
+    "suspend": "Suspend",
+    "manageRoles": "Manage Roles"
+  },
+  "leadTable": {
+    "name": "Prospect Name",
+    "contact": "Contact",
+    "source": "Source",
+    "status": "Status",
+    "assignedTo": "Assigned Staff",
+    "lastContact": "Last Contacted",
+    "nextFollowUp": "Next Follow-up",
+    "createLead": "Create Lead",
+    "assign": "Assign",
+    "convert": "Convert to Client"
+  },
+  "auditTable": {
+    "timestamp": "Timestamp",
+    "actor": "Actor",
+    "action": "Action",
+    "resource": "Target Resource",
+    "metadata": "Details"
+  }
+}

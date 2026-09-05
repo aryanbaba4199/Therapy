@@ -85,6 +85,10 @@ export const baseApi = createApi({
     "TherapistRating",
     "SupportTicket",
     "SupportMessage",
+    "OperationsMetrics",
+    "OperationsUser",
+    "Lead",
+    "AuditLog",
   ],
   endpoints: () => ({}),
 });

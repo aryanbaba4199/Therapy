@@ -9,6 +9,7 @@ class UserRole(StrEnum):
     USER = "user"
     THERAPIST = "therapist"
     STAFF = "staff"
+    FIRST_RESPONDER = "first_responder"
     ADMIN = "admin"
     SUPER_ADMIN = "super_admin"
 

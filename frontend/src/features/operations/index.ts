@@ -1,2 +1,10 @@
-// Feature module placeholder
-export type {};
+export * from "./types/operations_types";
+export * from "./api/operations_api";
+export * from "./pages/AdminDashboardPage";
+export * from "./pages/UserManagementPage";
+export * from "./pages/TherapistOperationsPage";
+export * from "./pages/LeadManagementPage";
+export * from "./pages/BookingOperationsPage";
+export * from "./pages/PaymentOperationsPage";
+export * from "./pages/FirstResponderDashboardPage";
+export * from "./pages/AuditLogPage";

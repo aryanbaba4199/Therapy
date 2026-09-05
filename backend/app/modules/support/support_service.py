@@ -46,7 +46,13 @@ class SupportService:
     def _is_staff_or_admin(self, user: UserInDB) -> bool:
         """Check if user has customer support / staff authorization."""
         return any(
-            role in [UserRole.STAFF, UserRole.ADMIN, UserRole.SUPER_ADMIN]
+            role
+            in [
+                UserRole.STAFF,
+                UserRole.FIRST_RESPONDER,
+                UserRole.ADMIN,
+                UserRole.SUPER_ADMIN,
+            ]
             for role in user.roles
         )
 

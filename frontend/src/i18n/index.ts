@@ -22,6 +22,7 @@ import enSession from "./locales/en/session.json";
 import enSupport from "./locales/en/support.json";
 import enTherapist from "./locales/en/therapist.json";
 import enValidation from "./locales/en/validation.json";
+import enOperations from "./locales/en/operations.json";
 
 import mlAuth from "./locales/ml/auth.json";
 import mlAvailability from "./locales/ml/availability.json";
@@ -35,6 +36,7 @@ import mlSession from "./locales/ml/session.json";
 import mlSupport from "./locales/ml/support.json";
 import mlTherapist from "./locales/ml/therapist.json";
 import mlValidation from "./locales/ml/validation.json";
+import mlOperations from "./locales/ml/operations.json";
 
 import taAuth from "./locales/ta/auth.json";
 import taAvailability from "./locales/ta/availability.json";
@@ -48,6 +50,7 @@ import taSession from "./locales/ta/session.json";
 import taSupport from "./locales/ta/support.json";
 import taTherapist from "./locales/ta/therapist.json";
 import taValidation from "./locales/ta/validation.json";
+import taOperations from "./locales/ta/operations.json";
 
 export const resources = {
   en: {
@@ -63,6 +66,7 @@ export const resources = {
     session: enSession,
     review: enReview,
     support: enSupport,
+    operations: enOperations,
   },
   ml: {
     common: mlCommon,
@@ -77,6 +81,7 @@ export const resources = {
     session: mlSession,
     review: mlReview,
     support: mlSupport,
+    operations: mlOperations,
   },
   ta: {
     common: taCommon,
@@ -91,6 +96,7 @@ export const resources = {
     session: taSession,
     review: taReview,
     support: taSupport,
+    operations: taOperations,
   },
 } as const;
 

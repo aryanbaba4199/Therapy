@@ -7,6 +7,7 @@ from app.modules.auth.auth_route import router as auth_router
 from app.modules.availability.availability_route import router as availability_router
 from app.modules.booking.booking_route import router as booking_router
 from app.modules.offer.offer_route import router as offer_router
+from app.modules.operations.operations_route import router as operations_router
 from app.modules.package.package_route import router as package_router
 from app.modules.payment.payment_route import router as payment_router
 from app.modules.review.review_route import router as review_router
@@ -34,6 +35,7 @@ api_v1_router.include_router(session_router)
 api_v1_router.include_router(therapist_portal_router)
 api_v1_router.include_router(review_router)
 api_v1_router.include_router(support_router)
+api_v1_router.include_router(operations_router)
 
 
 

@@ -1,0 +1,52 @@
+{
+  "operationsPortal": "ഓപ്പറേഷൻസ് & അഡ്മിൻ ഹബ്ബ്",
+  "firstResponderHub": "ഫസ്റ്റ് റെസ്‌പോണ്ടർ ട്രിയാജ്",
+  "dashboard": "ഡാഷ്‌ബോർഡ്",
+  "users": "ഉപയോക്തൃ മാനേജ്‌മെന്റ്",
+  "therapists": "തെറാപ്പിസ്റ്റ് പരിശോധന",
+  "bookings": "ബുക്കിംഗുകൾ",
+  "payments": "പേയ്‌മെന്റ് ലെഡ്ജർ",
+  "leads": "ലീഡ് മാനേജ്‌മെന്റ്",
+  "auditLogs": "ഓഡിറ്റ് ട്രയൽ",
+  "metrics": {
+    "todayBookings": "ഇന്നത്തെ ബുക്കിംഗുകൾ",
+    "upcomingSessions": "വരാനിരിക്കുന്ന സെഷനുകൾ",
+    "completedSessions": "പൂർത്തിയായ സെഷനുകൾ",
+    "activeTherapists": "സജീവ തെറാപ്പിസ്റ്റുകൾ",
+    "pendingVerifications": "പരിശോധന ബാക്കിയുള്ളവ",
+    "pendingTickets": "തീർപ്പാക്കാത്ത സപ്പോർട്ട് കേസുകൾ",
+    "failedPayments": "പരാജയപ്പെട്ട പേയ്‌മെന്റുകൾ",
+    "totalRevenue": "മൊത്തം വരുമാനം",
+    "newLeads": "പുതിയ ലീഡുകൾ"
+  },
+  "userTable": {
+    "name": "പേര്",
+    "email": "ഇമെയിൽ",
+    "phone": "ഫോൺ",
+    "roles": "റോളുകൾ",
+    "status": "സ്റ്റാറ്റസ്",
+    "actions": "നടപടികൾ",
+    "activate": "സജീവമാക്കുക",
+    "suspend": "താൽക്കാലികമായി നിർത്തുക",
+    "manageRoles": "റോളുകൾ മാറ്റുക"
+  },
+  "leadTable": {
+    "name": "പേര്",
+    "contact": "ബന്ധപ്പെടുക",
+    "source": "ഉറവിടം",
+    "status": "സ്റ്റാറ്റസ്",
+    "assignedTo": "ചുമതലപ്പെടുത്തിയ ഉദ്യോഗസ്ഥൻ",
+    "lastContact": "അവസാനം ബന്ധപ്പെട്ട സമയം",
+    "nextFollowUp": "അടുത്ത ഫോളോ-അപ്പ്",
+    "createLead": "പുതിയ ലീഡ് ചേർക്കുക",
+    "assign": "ചുമതലപ്പെടുത്തുക",
+    "convert": "ക്ലയന്റാക്കി മാറ്റുക"
+  },
+  "auditTable": {
+    "timestamp": "സമയം",
+    "actor": "നടത്തിയ വ്യക്തി",
+    "action": "നടപടി",
+    "resource": "ലക്ഷ്യം",
+    "metadata": "വിശദാംശങ്ങൾ"
+  }
+}

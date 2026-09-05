@@ -22,6 +22,16 @@ import {
 } from "../features/session";
 import { MyReviewsPage } from "../features/review";
 import { SupportCenterPage, TicketDetailPage } from "../features/support";
+import {
+  AdminDashboardPage,
+  AuditLogPage,
+  BookingOperationsPage,
+  FirstResponderDashboardPage,
+  LeadManagementPage,
+  PaymentOperationsPage,
+  TherapistOperationsPage,
+  UserManagementPage,
+} from "../features/operations";
 import { ProtectedRoute } from "./protected_route";
 import { RoleProtectedRoute } from "./role_protected_route";
 
@@ -119,6 +129,52 @@ export const router = createBrowserRouter([
               {
                 path: "therapist/sessions/:sessionId",
                 element: <TherapistSessionDetailPage />,
+              },
+            ],
+          },
+          {
+            element: (
+              <RoleProtectedRoute
+                allowedRoles={[
+                  "staff",
+                  "first_responder",
+                  "admin",
+                  "super_admin",
+                ]}
+              />
+            ),
+            children: [
+              {
+                path: "operations/dashboard",
+                element: <AdminDashboardPage />,
+              },
+              {
+                path: "operations/first-responder",
+                element: <FirstResponderDashboardPage />,
+              },
+              {
+                path: "operations/leads",
+                element: <LeadManagementPage />,
+              },
+              {
+                path: "operations/users",
+                element: <UserManagementPage />,
+              },
+              {
+                path: "operations/therapists",
+                element: <TherapistOperationsPage />,
+              },
+              {
+                path: "operations/bookings",
+                element: <BookingOperationsPage />,
+              },
+              {
+                path: "operations/payments",
+                element: <PaymentOperationsPage />,
+              },
+              {
+                path: "operations/audit-logs",
+                element: <AuditLogPage />,
               },
             ],
           },

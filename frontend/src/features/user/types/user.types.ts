@@ -1,4 +1,5 @@
-export type UserRole = "user" | "therapist" | "staff" | "admin" | "super_admin";
+export type UserRole =
+  "user" | "therapist" | "staff" | "first_responder" | "admin" | "super_admin";
 export type UserStatus = "active" | "inactive" | "suspended" | "deleted";
 export type AuthProvider = "password" | "otp" | "google";
 

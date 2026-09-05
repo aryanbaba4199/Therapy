@@ -122,7 +122,10 @@ async def list_staff_tickets(
         UserInDB,
         Depends(
             require_roles(
-                UserRole.STAFF, UserRole.ADMIN, UserRole.SUPER_ADMIN
+                UserRole.STAFF,
+                UserRole.FIRST_RESPONDER,
+                UserRole.ADMIN,
+                UserRole.SUPER_ADMIN,
             )
         ),
     ],

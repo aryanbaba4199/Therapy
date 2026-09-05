@@ -34,6 +34,23 @@ export const supportApi = baseApi.injectEndpoints({
       providesTags: ["SupportTicket"],
     }),
 
+    listAllTickets: builder.query<
+      ApiResponse<SupportTicketResponse[]>,
+      {
+        status?: SupportTicketStatus;
+        category?: string;
+        assigned_to?: string;
+        page?: number;
+        limit?: number;
+      } | void
+    >({
+      query: (params) => ({
+        url: "/support/staff/tickets",
+        params: params || {},
+      }),
+      providesTags: ["SupportTicket"],
+    }),
+
     getTicketById: builder.query<
       ApiResponse<SupportTicketDetailResponse>,
       string
@@ -76,6 +93,7 @@ export const supportApi = baseApi.injectEndpoints({
 export const {
   useCreateTicketMutation,
   useListMyTicketsQuery,
+  useListAllTicketsQuery,
   useGetTicketByIdQuery,
   useSendMessageMutation,
   useCloseTicketMutation,
