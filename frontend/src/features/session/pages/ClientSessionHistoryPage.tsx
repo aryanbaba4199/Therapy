@@ -16,11 +16,18 @@ import {
   Typography,
 } from "@mui/material";
 import { useTranslation } from "react-i18next";
-import { FiCalendar, FiClock, FiFileText, FiVideo } from "react-icons/fi";
+import {
+  FiCalendar,
+  FiClock,
+  FiFileText,
+  FiStar,
+  FiVideo,
+} from "react-icons/fi";
 import {
   useGetClientSessionNoteQuery,
   useListMySessionsQuery,
 } from "../api/session_api";
+import { ReviewFormModal } from "../../review";
 import { SessionStatusChip } from "../components/SessionStatusChip";
 import type {
   ClientSessionResponse,
@@ -33,6 +40,8 @@ export const ClientSessionHistoryPage: React.FC = () => {
   const { t } = useTranslation(["session", "common"]);
   const [activeTab, setActiveTab] = useState<ClientTabFilter>("all");
   const [selectedSessionForNotes, setSelectedSessionForNotes] =
+    useState<ClientSessionResponse | null>(null);
+  const [selectedSessionForReview, setSelectedSessionForReview] =
     useState<ClientSessionResponse | null>(null);
 
   const statusParam: SessionStatus | undefined =
@@ -162,22 +171,47 @@ export const ClientSessionHistoryPage: React.FC = () => {
                   </Box>
 
                   {sess.status === "completed" && (
-                    <Button
-                      variant="outlined"
-                      color="primary"
-                      size="small"
-                      startIcon={<FiFileText />}
-                      onClick={() => setSelectedSessionForNotes(sess)}
-                      className="rounded-xl normal-case font-semibold shrink-0"
-                    >
-                      {t("session:summaryNote")}
-                    </Button>
+                    <Box className="flex items-center gap-2">
+                      <Button
+                        variant="outlined"
+                        color="secondary"
+                        size="small"
+                        startIcon={<FiStar />}
+                        onClick={() => setSelectedSessionForReview(sess)}
+                        className="rounded-xl normal-case font-semibold shrink-0"
+                      >
+                        {t("review:writeReview", "Review")}
+                      </Button>
+                      <Button
+                        variant="outlined"
+                        color="primary"
+                        size="small"
+                        startIcon={<FiFileText />}
+                        onClick={() => setSelectedSessionForNotes(sess)}
+                        className="rounded-xl normal-case font-semibold shrink-0"
+                      >
+                        {t("session:summaryNote")}
+                      </Button>
+                    </Box>
                   )}
                 </CardContent>
               </Card>
             );
           })}
         </Box>
+      )}
+
+      {/* Review Modal Dialog */}
+      {selectedSessionForReview && (
+        <ReviewFormModal
+          open={Boolean(selectedSessionForReview)}
+          onClose={() => setSelectedSessionForReview(null)}
+          sessionId={selectedSessionForReview.id}
+          onSuccess={() => {
+            setSelectedSessionForReview(null);
+            refetch();
+          }}
+        />
       )}
 
       {/* Client Note Modal Dialog (Strictly sanitized summary only) */}

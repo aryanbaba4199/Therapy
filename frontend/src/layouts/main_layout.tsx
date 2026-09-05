@@ -81,6 +81,18 @@ export const MainLayout: React.FC = () => {
                     >
                       <span>My Bookings</span>
                     </Link>
+                    <Link
+                      to="/my-reviews"
+                      className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold text-teal-800 hover:bg-teal-50 transition-colors"
+                    >
+                      <span>My Reviews</span>
+                    </Link>
+                    <Link
+                      to="/support"
+                      className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold text-teal-800 hover:bg-teal-50 transition-colors"
+                    >
+                      <span>Support</span>
+                    </Link>
                   </>
                 )}
                 <Link

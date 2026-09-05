@@ -265,3 +265,51 @@ To guarantee that two users attempting to book the same slot simultaneously cann
    - `/therapist/sessions/:id`: Deep session detail view with session metadata, attendance controls, Clinical Notes editor (with clear confidentiality badges), and Therapy Goals management.
    - `/my-sessions`: Client-facing consultation history displaying session status, schedule, mode, and shared summary notes (with zero exposure to private notes).
    - 100% trilingual localization across English (`en`), Malayalam (`ml`), and Tamil (`ta`).
+
+---
+
+## 9. Phase 8 — Reviews, Feedback & Customer Support Architecture
+
+### Domain Overview & Operational Design
+1. **Post-Session Reviews & Aggregated Ratings**:
+   - **1-Review-Per-Session Invariant**: Strictly enforced at the database level with a MongoDB unique index on `session_id`.
+   - **Eligibility & Verification**: Caller must be an authenticated client owning the completed therapy session. Only sessions in `COMPLETED` status are eligible for review.
+   - **Rating Metrics**: Integer score between 1 and 5 (`$1 \le \text{rating} \le 5$`). Optional structured feedback includes review comment, client display name (with option for anonymization `Anonymous Client`), and session tags.
+   - **Aggregated Ratings Calculation**: The `ReviewRepository.get_therapist_rating_summary()` executes an efficient MongoDB `$facet` aggregation pipeline computing:
+     - `average_rating`: Rounded to 2 decimal places.
+     - `review_count`: Total published reviews count.
+     - `rating_distribution`: Count of 1-star, 2-star, 3-star, 4-star, and 5-star ratings.
+   - **Concurrency Safety**: High-concurrency submissions on the same session are mutually exclusive; exactly 1 review succeeds while subsequent concurrent attempts fail with `409 Conflict` (`REVIEW_ALREADY_EXISTS`).
+   - **Public vs Client Endpoints**:
+     - `GET /api/v1/reviews/therapist/{therapist_id}`: Public listing of published reviews.
+     - `GET /api/v1/reviews/therapist/{therapist_id}/summary`: Public summary with rating distribution.
+     - `GET /api/v1/reviews/my`: Authenticated client's review history.
+     - `POST /api/v1/reviews`: Authenticated submission with eligibility validation.
+
+2. **Customer Support & Ticket System**:
+   - **Dedicated Ticket Ledger**: Tickets stored in `support_tickets` collection with auto-generated sequential ticket numbers (`TKT-YYYYMMDD-XXXX`).
+   - **Ticket Categories & Priorities**:
+     - Categories: `booking`, `payment`, `therapist`, `session`, `package`, `account`, `technical`, `other`.
+     - Priorities: `low`, `normal`, `high`, `urgent`.
+     - Status Lifecycle: `open` -> `in_progress` -> `waiting_for_user` -> `resolved` -> `closed`.
+   - **Strict IDOR Reference Verification**:
+     - When submitting tickets with contextual entity references (`booking_id`, `payment_id`, `package_id`, `session_id`), the `SupportService` verifies ownership against the corresponding collections. If a user attempts to reference a resource belonging to another client or therapist, the request is rejected with `403 Forbidden` (`SUPPORT_TICKET_REFERENCE_FORBIDDEN`).
+   - **Scalable Messaging & Internal Notes Isolation**:
+     - Support conversation threads are stored in a dedicated `support_messages` collection indexed on `(ticket_id, created_at)`.
+     - `is_internal_note`: Support agents and staff can post internal deliberations that are strictly hidden from client-facing responses and visible only to staff roles.
+   - **Staff Assignment Workflows**:
+     - Staff members can assign tickets (`assign_ticket`), update statuses (`update_ticket_status`), and collaborate within conversation threads.
+
+3. **Frontend Integration & Trilingual Support**:
+   - **Review System UI**:
+     - `ReviewFormModal.tsx`: Interactive review dialog with 5-star interactive rating input, character validation, and anonymous toggles.
+     - `TherapistRatingSummary.tsx` & `ReviewCard.tsx`: Rich rating summaries and published feedback cards embedded into `TherapistDetailPage.tsx`.
+     - `MyReviewsPage.tsx`: Client portal page (`/my-reviews`) tracking submitted reviews.
+     - `ClientSessionHistoryPage.tsx`: Quick "Review Consultation" action available on completed sessions.
+   - **Support Center UI**:
+     - `SupportCenterPage.tsx`: Filterable ticket overview (`/support`) with category tabs, status indicators, and modal ticket creation (`CreateTicketModal.tsx`).
+     - `TicketDetailPage.tsx`: Deep conversation viewer (`/support/tickets/:ticketId`) displaying chronological client and staff messages, entity reference cards, and dynamic reply composer.
+   - **Global Accessibility & Strict Type Safety**:
+     - Integrated into `MainLayout.tsx` header navigation and React Router.
+     - 100% trilingual localization in English (`en`), Malayalam (`ml`), and Tamil (`ta`).
+     - Zero TypeScript errors (`npm run type-check`), zero lint violations (`npm run lint`), Prettier formatted (`npm run format:check`), and production build passing (`npm run build`).

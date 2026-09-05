@@ -17,7 +17,9 @@ import enCommon from "./locales/en/common.json";
 import enNavigation from "./locales/en/navigation.json";
 import enOffer from "./locales/en/offer.json";
 import enPayment from "./locales/en/payment.json";
+import enReview from "./locales/en/review.json";
 import enSession from "./locales/en/session.json";
+import enSupport from "./locales/en/support.json";
 import enTherapist from "./locales/en/therapist.json";
 import enValidation from "./locales/en/validation.json";
 
@@ -28,7 +30,9 @@ import mlCommon from "./locales/ml/common.json";
 import mlNavigation from "./locales/ml/navigation.json";
 import mlOffer from "./locales/ml/offer.json";
 import mlPayment from "./locales/ml/payment.json";
+import mlReview from "./locales/ml/review.json";
 import mlSession from "./locales/ml/session.json";
+import mlSupport from "./locales/ml/support.json";
 import mlTherapist from "./locales/ml/therapist.json";
 import mlValidation from "./locales/ml/validation.json";
 
@@ -39,7 +43,9 @@ import taCommon from "./locales/ta/common.json";
 import taNavigation from "./locales/ta/navigation.json";
 import taOffer from "./locales/ta/offer.json";
 import taPayment from "./locales/ta/payment.json";
+import taReview from "./locales/ta/review.json";
 import taSession from "./locales/ta/session.json";
+import taSupport from "./locales/ta/support.json";
 import taTherapist from "./locales/ta/therapist.json";
 import taValidation from "./locales/ta/validation.json";
 
@@ -55,6 +61,8 @@ export const resources = {
     payment: enPayment,
     offer: enOffer,
     session: enSession,
+    review: enReview,
+    support: enSupport,
   },
   ml: {
     common: mlCommon,
@@ -67,6 +75,8 @@ export const resources = {
     payment: mlPayment,
     offer: mlOffer,
     session: mlSession,
+    review: mlReview,
+    support: mlSupport,
   },
   ta: {
     common: taCommon,
@@ -79,6 +89,8 @@ export const resources = {
     payment: taPayment,
     offer: taOffer,
     session: taSession,
+    review: taReview,
+    support: taSupport,
   },
 } as const;
 

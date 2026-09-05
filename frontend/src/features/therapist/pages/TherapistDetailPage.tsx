@@ -34,6 +34,12 @@ import {
   SpecializationBadge,
   VerifiedBadge,
 } from "../components/TherapistBadges";
+import {
+  ReviewCard,
+  TherapistRatingSummary,
+  useGetTherapistRatingSummaryQuery,
+  useListTherapistReviewsQuery,
+} from "../../review";
 
 export const TherapistDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -50,6 +56,15 @@ export const TherapistDetailPage: React.FC = () => {
   } = useGetTherapistQuery(id || "", {
     skip: !id,
   });
+
+  const { data: ratingSummaryData, isLoading: isSummaryLoading } =
+    useGetTherapistRatingSummaryQuery(id || "", { skip: !id });
+
+  const { data: reviewsData, isLoading: isReviewsLoading } =
+    useListTherapistReviewsQuery(
+      { therapistId: id || "", page: 1, limit: 20 },
+      { skip: !id }
+    );
 
   const {
     selectedDate,
@@ -363,6 +378,47 @@ export const TherapistDetailPage: React.FC = () => {
                 isLoading={isSlotsLoading}
                 isError={isSlotsError}
               />
+            </Card>
+
+            {/* Client Reviews & Rating Summary */}
+            <Card
+              elevation={2}
+              sx={{ borderRadius: 3, p: { xs: 3, md: 5 }, mt: 4 }}
+            >
+              <Typography variant="h5" sx={{ fontWeight: 800, mb: 3 }}>
+                Client Reviews & Ratings
+              </Typography>
+
+              {isSummaryLoading ? (
+                <Box sx={{ display: "flex", justifyContent: "center", py: 4 }}>
+                  <CircularProgress size={32} />
+                </Box>
+              ) : ratingSummaryData?.data ? (
+                <TherapistRatingSummary summary={ratingSummaryData.data} />
+              ) : null}
+
+              <Divider sx={{ my: 4 }} />
+
+              {isReviewsLoading ? (
+                <Box sx={{ display: "flex", justifyContent: "center", py: 4 }}>
+                  <CircularProgress size={32} />
+                </Box>
+              ) : reviewsData?.data && reviewsData.data.length > 0 ? (
+                <Stack spacing={2}>
+                  {reviewsData.data.map((review) => (
+                    <ReviewCard key={review.id} review={review} />
+                  ))}
+                </Stack>
+              ) : (
+                <Typography
+                  variant="body2"
+                  color="text.secondary"
+                  sx={{ textAlign: "center", py: 2 }}
+                >
+                  No published reviews yet. Be the first to share your
+                  experience after your consultation!
+                </Typography>
+              )}
             </Card>
           </Grid>
 

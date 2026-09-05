@@ -9,8 +9,10 @@ from app.modules.booking.booking_route import router as booking_router
 from app.modules.offer.offer_route import router as offer_router
 from app.modules.package.package_route import router as package_router
 from app.modules.payment.payment_route import router as payment_router
+from app.modules.review.review_route import router as review_router
 from app.modules.session.session_route import portal_router as therapist_portal_router
 from app.modules.session.session_route import router as session_router
+from app.modules.support.support_route import router as support_router
 from app.modules.therapist.therapist_route import router as therapist_router
 from app.modules.user.user_route import router as user_router
 
@@ -30,6 +32,8 @@ api_v1_router.include_router(offer_router)
 api_v1_router.include_router(package_router)
 api_v1_router.include_router(session_router)
 api_v1_router.include_router(therapist_portal_router)
+api_v1_router.include_router(review_router)
+api_v1_router.include_router(support_router)
 
 
 

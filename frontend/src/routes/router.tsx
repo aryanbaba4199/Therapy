@@ -20,6 +20,8 @@ import {
   TherapistSessionDetailPage,
   TherapistSessionListPage,
 } from "../features/session";
+import { MyReviewsPage } from "../features/review";
+import { SupportCenterPage, TicketDetailPage } from "../features/support";
 import { ProtectedRoute } from "./protected_route";
 import { RoleProtectedRoute } from "./role_protected_route";
 
@@ -86,6 +88,18 @@ export const router = createBrowserRouter([
           {
             path: "my-sessions",
             element: <ClientSessionHistoryPage />,
+          },
+          {
+            path: "my-reviews",
+            element: <MyReviewsPage />,
+          },
+          {
+            path: "support",
+            element: <SupportCenterPage />,
+          },
+          {
+            path: "support/tickets/:ticketId",
+            element: <TicketDetailPage />,
           },
           {
             element: (
