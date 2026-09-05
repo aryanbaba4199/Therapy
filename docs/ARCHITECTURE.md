@@ -161,3 +161,33 @@ frontend/src/
 | **TypeScript**| Frontend | Strict compiler validation | `npm run type-check` |
 | **Prettier** | Frontend | Code style formatting | `npm run format` |
 | **Vite** | Frontend | Bundling & build validation | `npm run build` |
+
+---
+
+## 5. Phase 4 — Availability & Slot Engine Architecture
+
+### Domain Separation & Responsibility
+1. **Recurring Weekly Schedule**: Defined per therapist with day of week (0=Mon to 6=Sun), interval windows (`start_time` - `end_time` in "HH:MM"), timezone (e.g. `Asia/Kolkata`), and allowed `session_modes`.
+2. **Date-Specific Exceptions**: Date overrides (`is_unavailable: true` or custom replacement intervals) allowing leaves, holidays, or special clinic hours without polluting recurring rules.
+3. **Extra Slots**: Explicit one-off slots added by the therapist.
+4. **Deterministic Slot Engine (`slot_engine.py`)**: A pure domain algorithm with zero database and zero HTTP dependencies:
+   - Chunking: base intervals divided into slots of `duration_minutes + buffer_minutes`.
+   - Precedence: Recurring schedule -> Date exception override -> Extra slots.
+   - Timezone Handling: Times parsed in therapist's timezone (`ZoneInfo`), canonical timestamps rendered in timezone-aware UTC ISO.
+   - Past Slot Filtering: Slots starting in the past relative to current UTC time are excluded for live bookings.
+   - Stable Identifiers: 24-character SHA-256 hex digest of `f"{therapist_id}:{start_at.isoformat()}:{end_at.isoformat()}:{session_mode.value}"`.
+
+### Concurrency & Atomic Reservation Strategy (for Phase 5 Booking)
+To guarantee that two users attempting to book the same slot simultaneously cannot create double bookings:
+1. When generating slots for discovery, slots are presented as transient entities with status `AVAILABLE`.
+2. In Phase 5, booking creation will execute an atomic conditional write in MongoDB:
+   ```python
+   # MongoDB atomic reservation primitive
+   result = await db["bookings"].update_one(
+       {"therapist_id": therapist_id, "slot_id": slot_id, "status": "AVAILABLE"},
+       {"$set": {"status": "RESERVED", "reserved_by": user_id, "reserved_at": utc_now(), "expires_at": expires_at}},
+       upsert=True # Or atomic lock document in reservations collection
+   )
+   ```
+3. A unique compound index on `("therapist_id", "slot_id")` or `("therapist_id", "start_at", "session_mode")` in the `bookings` collection enforces database-level mutual exclusion, guaranteeing that only the first request succeeds while concurrent attempts encounter duplicate key violations / conflict errors.
+

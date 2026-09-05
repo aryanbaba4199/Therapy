@@ -1,2 +1,11 @@
-// Feature module placeholder
-export type {};
+export * from "./types/availability.types";
+export * from "./types/slot.types";
+export * from "./api/availability_api";
+export * from "./hooks/useSlots";
+export * from "./hooks/useAvailability";
+export * from "./components/SlotCard";
+export * from "./components/SlotGrid";
+export * from "./components/AvailabilityCalendar";
+export * from "./components/ExtraSlotDialog";
+export * from "./components/WeeklyScheduleEditor";
+export * from "./pages/AvailabilitySchedulePage";

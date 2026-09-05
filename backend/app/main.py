@@ -24,13 +24,16 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     if mongo_manager.db is not None:
         try:
             from app.modules.auth.auth_repository import AuthRepository
+            from app.modules.availability.availability_repository import AvailabilityRepository
             from app.modules.therapist.therapist_repository import TherapistRepository
             from app.modules.user.user_repository import UserRepository
 
             await UserRepository(mongo_manager.db).ensure_indexes()
             await AuthRepository(mongo_manager.db).ensure_indexes()
             await TherapistRepository(mongo_manager.db).ensure_indexes()
+            await AvailabilityRepository(mongo_manager.db).ensure_indexes()
             logger.info("Database indexes initialized.")
+
         except Exception as exc:
             logger.warning("Database index creation deferred: %s", exc)
     logger.info("Application startup lifecycle complete.")

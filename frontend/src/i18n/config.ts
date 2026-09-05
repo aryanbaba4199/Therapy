@@ -13,7 +13,9 @@ export const NAMESPACES = [
   "auth",
   "validation",
   "therapist",
+  "availability",
 ] as const;
+
 export type Namespace = (typeof NAMESPACES)[number];
 
 export const DEFAULT_LANGUAGE: SupportedLanguage = "en";

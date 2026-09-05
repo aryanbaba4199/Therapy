@@ -24,6 +24,7 @@ import {
   FaGraduationCap,
   FaUser,
 } from "react-icons/fa";
+import { AvailabilityCalendar, SlotGrid, useSlots } from "../../availability";
 import { useGetTherapistQuery } from "../api/therapist_api";
 import { TherapistAudioPlayer } from "../components/TherapistAudioPlayer";
 import {
@@ -34,7 +35,7 @@ import {
 
 export const TherapistDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
-  const { t } = useTranslation(["therapist", "common"]);
+  const { t } = useTranslation(["therapist", "availability", "common"]);
   const {
     data: response,
     isLoading,
@@ -42,6 +43,18 @@ export const TherapistDetailPage: React.FC = () => {
   } = useGetTherapistQuery(id || "", {
     skip: !id,
   });
+
+  const {
+    selectedDate,
+    setSelectedDate,
+    selectedMode,
+    setSelectedMode,
+    selectedSlot,
+    setSelectedSlot,
+    groupedSlots,
+    isLoading: isSlotsLoading,
+    isError: isSlotsError,
+  } = useSlots(id || "");
 
   const therapist = response?.data;
 
@@ -281,6 +294,69 @@ export const TherapistDetailPage: React.FC = () => {
                 ))}
               </Stack>
             </Card>
+
+            {/* Availability & Slots Selection Card */}
+            <Card
+              elevation={2}
+              sx={{ borderRadius: 3, p: { xs: 3, md: 5 }, mt: 4 }}
+            >
+              <Typography variant="h5" sx={{ fontWeight: 800, mb: 1 }}>
+                {t("availability:availableSlots")}
+              </Typography>
+              <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+                {t("availability:selectDate")}
+              </Typography>
+
+              {/* Date Calendar Ribbon */}
+              <AvailabilityCalendar
+                selectedDate={selectedDate}
+                onSelectDate={(newDate) => {
+                  setSelectedDate(newDate);
+                  setSelectedSlot(null);
+                }}
+              />
+
+              {/* Session Mode Filter Chips */}
+              <Box
+                sx={{
+                  display: "flex",
+                  gap: 1,
+                  mb: 2,
+                  flexWrap: "wrap",
+                  alignItems: "center",
+                }}
+              >
+                <Typography variant="caption" sx={{ fontWeight: 700, mr: 1 }}>
+                  {t("availability:sessionMode")}:
+                </Typography>
+                <Chip
+                  label={t("availability:allModes")}
+                  variant={selectedMode === undefined ? "filled" : "outlined"}
+                  color={selectedMode === undefined ? "primary" : "default"}
+                  onClick={() => setSelectedMode(undefined)}
+                  sx={{ fontWeight: 600, cursor: "pointer" }}
+                />
+                {therapist.session_modes.map((mode) => (
+                  <Chip
+                    key={mode}
+                    label={t(`therapist:sessionMode.${mode}`)}
+                    variant={selectedMode === mode ? "filled" : "outlined"}
+                    color={selectedMode === mode ? "primary" : "default"}
+                    onClick={() => setSelectedMode(mode)}
+                    sx={{ fontWeight: 600, cursor: "pointer" }}
+                  />
+                ))}
+              </Box>
+
+              {/* Slots Grid */}
+              <SlotGrid
+                groupedSlots={groupedSlots}
+                selectedSlot={selectedSlot}
+                onSelectSlot={(slot) => setSelectedSlot(slot)}
+                isLoading={isSlotsLoading}
+                isError={isSlotsError}
+              />
+            </Card>
           </Grid>
 
           {/* Booking / Action Card Sidebar */}
@@ -337,11 +413,56 @@ export const TherapistDetailPage: React.FC = () => {
                   ))}
                 </Stack>
 
+                {/* Selected Slot Information */}
+                {selectedSlot && (
+                  <Box
+                    sx={{
+                      p: 2,
+                      mb: 3,
+                      borderRadius: 2,
+                      backgroundColor: "primary.main",
+                      color: "primary.contrastText",
+                    }}
+                  >
+                    <Typography
+                      variant="caption"
+                      sx={{ fontWeight: 700, textTransform: "uppercase" }}
+                    >
+                      {t("availability:selectedSlot")}
+                    </Typography>
+                    <Typography
+                      variant="body2"
+                      sx={{ fontWeight: 700, mt: 0.5 }}
+                    >
+                      {new Date(selectedSlot.start_at).toLocaleDateString(
+                        undefined,
+                        {
+                          weekday: "short",
+                          month: "short",
+                          day: "numeric",
+                        }
+                      )}
+                    </Typography>
+                    <Typography variant="body2">
+                      {new Date(selectedSlot.start_at).toLocaleTimeString([], {
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      })}{" "}
+                      –{" "}
+                      {new Date(selectedSlot.end_at).toLocaleTimeString([], {
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      })}
+                    </Typography>
+                  </Box>
+                )}
+
                 <Button
                   variant="contained"
                   color="primary"
                   size="large"
                   fullWidth
+                  disabled={!selectedSlot}
                   startIcon={<FaCalendarCheck />}
                   sx={{
                     py: 1.5,
@@ -351,11 +472,15 @@ export const TherapistDetailPage: React.FC = () => {
                     textTransform: "none",
                   }}
                   onClick={() => {
-                    // Visual placeholder for Phase 4 / Phase 5 booking flow
-                    alert(t("therapist:bookNow"));
+                    // Future Phase 5 booking flow entrypoint
+                    alert(
+                      `${t("availability:bookSlot")}: Slot ID ${selectedSlot?.id}`
+                    );
                   }}
                 >
-                  {t("therapist:bookNow")}
+                  {selectedSlot
+                    ? t("availability:bookSlot")
+                    : t("availability:selectDate")}
                 </Button>
               </CardContent>
             </Card>

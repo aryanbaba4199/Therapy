@@ -5,6 +5,7 @@ import { LoginPage } from "../features/auth/pages/LoginPage";
 import { RegisterPage } from "../features/auth/pages/RegisterPage";
 import { TherapistDetailPage } from "../features/therapist/pages/TherapistDetailPage";
 import { TherapistListPage } from "../features/therapist/pages/TherapistListPage";
+import { AvailabilitySchedulePage } from "../features/availability";
 import { ProfilePage } from "../features/user/pages/ProfilePage";
 import { ProtectedRoute } from "./protected_route";
 
@@ -40,8 +41,13 @@ export const router = createBrowserRouter([
             path: "profile",
             element: <ProfilePage />,
           },
+          {
+            path: "therapist/schedule",
+            element: <AvailabilitySchedulePage />,
+          },
         ],
       },
+
       {
         path: "*",
         element: <HomePage />,
