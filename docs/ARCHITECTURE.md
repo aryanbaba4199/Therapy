@@ -180,14 +180,30 @@ frontend/src/
 ### Concurrency & Atomic Reservation Strategy (for Phase 5 Booking)
 To guarantee that two users attempting to book the same slot simultaneously cannot create double bookings:
 1. When generating slots for discovery, slots are presented as transient entities with status `AVAILABLE`.
-2. In Phase 5, booking creation will execute an atomic conditional write in MongoDB:
-   ```python
-   # MongoDB atomic reservation primitive
-   result = await db["bookings"].update_one(
-       {"therapist_id": therapist_id, "slot_id": slot_id, "status": "AVAILABLE"},
-       {"$set": {"status": "RESERVED", "reserved_by": user_id, "reserved_at": utc_now(), "expires_at": expires_at}},
-       upsert=True # Or atomic lock document in reservations collection
-   )
-   ```
-3. A unique compound index on `("therapist_id", "slot_id")` or `("therapist_id", "start_at", "session_mode")` in the `bookings` collection enforces database-level mutual exclusion, guaranteeing that only the first request succeeds while concurrent attempts encounter duplicate key violations / conflict errors.
+2. In Phase 5, booking creation executes an atomic conditional write in MongoDB.
+3. A unique compound partial index enforces database-level mutual exclusion, guaranteeing that only the first request succeeds while concurrent attempts encounter duplicate key violations / conflict errors.
+
+---
+
+## 6. Phase 5 — Booking & Reservation Engine Architecture
+
+### Domain Flow & Invariants
+1. **Slot Selection & Validation**: Slot ID and timestamp parameters are validated against Phase 4 Slot Engine and therapist status (active & verified).
+2. **Atomic Temporary Reservation**:
+   - Client creates a temporary hold (`ReservationInDB`) with configurable TTL (`BOOKING_RESERVATION_TTL_SECONDS = 900` / 15 minutes).
+   - Protected by MongoDB partial unique index on `("therapist_id", "slot_id")` with `partialFilterExpression: {"status": "active"}`.
+   - Any concurrent request trying to hold the same slot hits `DuplicateKeyError`, mapped cleanly to `409 Conflict` (`BOOKING_SLOT_UNAVAILABLE`).
+   - If a reservation expires, it is lazily transitioned to `expired`, immediately freeing the partial unique index.
+   - Client can cancel an active reservation at any time, returning the slot to the pool.
+3. **Idempotent Booking Confirmation**:
+   - The user reviews the reservation checkout summary with a real-time countdown timer.
+   - Confirmation transitions the reservation from `active` to `converted`, creates an immutable `BookingInDB` record with therapist, client, and pricing snapshots, and sets status to `confirmed`.
+   - Idempotency check: Retrying confirmation with the same `reservation_id` returns the already confirmed booking without duplicate charges or database records.
+   - Bookings collection enforces a partial unique index on `("therapist_id", "slot_id")` for statuses `["pending", "confirmed"]`.
+4. **Availability Filtering**:
+   - `AvailabilityService.get_available_slots()` filters out all slots actively reserved (`status="active"` and `expires_at > now`) or confirmed (`status in ["pending", "confirmed"]`).
+5. **Booking History & Lifecycle**:
+   - Authenticated clients query `/api/v1/bookings` with filters (`upcoming`, `past`, `cancelled`) and pagination metadata.
+   - Confirmed bookings can be cancelled with an optional cancellation reason.
+   - Strictly prepared for Phase 6 (Payment & Offers) with zero payment leakage.
 

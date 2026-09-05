@@ -25,6 +25,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         try:
             from app.modules.auth.auth_repository import AuthRepository
             from app.modules.availability.availability_repository import AvailabilityRepository
+            from app.modules.booking.booking_repository import BookingRepository
             from app.modules.therapist.therapist_repository import TherapistRepository
             from app.modules.user.user_repository import UserRepository
 
@@ -32,7 +33,9 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
             await AuthRepository(mongo_manager.db).ensure_indexes()
             await TherapistRepository(mongo_manager.db).ensure_indexes()
             await AvailabilityRepository(mongo_manager.db).ensure_indexes()
+            await BookingRepository(mongo_manager.db).ensure_indexes()
             logger.info("Database indexes initialized.")
+
 
         except Exception as exc:
             logger.warning("Database index creation deferred: %s", exc)

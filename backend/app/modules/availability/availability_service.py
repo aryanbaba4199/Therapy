@@ -364,6 +364,7 @@ class AvailabilityService:
 
         duration_minutes = therapist.pricing.duration_minutes
         now_utc = utc_now()
+        unavailable_slot_ids = await self.availability_repo.get_unavailable_slot_ids(therapist_id)
         all_slots: list[GeneratedSlotResponse] = []
 
         curr_d = start_d
@@ -385,7 +386,9 @@ class AvailabilityService:
                 therapist_timezone=tz_name,
                 current_utc_time=now_utc,
             )
-            all_slots.extend(day_slots)
+            # Filter out active reservations and pending/confirmed bookings
+            available_day_slots = [s for s in day_slots if s.id not in unavailable_slot_ids]
+            all_slots.extend(available_day_slots)
             curr_d += timedelta(days=1)
 
         return all_slots

@@ -20,9 +20,11 @@ class AvailabilityRepository:
     EXTRA_SLOTS_COLLECTION = "extra_slots"
 
     def __init__(self, db: AsyncIOMotorDatabase[dict[str, Any]]) -> None:
+        self.db = db
         self.schedules = db[self.SCHEDULES_COLLECTION]
         self.exceptions = db[self.EXCEPTIONS_COLLECTION]
         self.extra_slots = db[self.EXTRA_SLOTS_COLLECTION]
+
 
     async def ensure_indexes(self) -> None:
         """Create necessary indexes for efficient scheduling lookups."""
@@ -118,3 +120,38 @@ class AvailabilityRepository:
         """Delete extra slot by its ID."""
         res = await self.extra_slots.delete_one({"id": slot_id})
         return res.deleted_count > 0
+
+    async def get_unavailable_slot_ids(self, therapist_id: str) -> set[str]:
+        """Fetch IDs of slots that are currently active in reservations or confirmed bookings."""
+        from datetime import UTC, datetime
+
+        now = datetime.now(UTC)
+        slot_ids: set[str] = set()
+
+        res_cursor = self.db["reservations"].find(
+            {
+                "therapist_id": therapist_id,
+                "status": "active",
+                "expires_at": {"$gt": now},
+            },
+            {"slot_id": 1},
+        )
+        res_docs = await res_cursor.to_list(length=500)
+        for d in res_docs:
+            if "slot_id" in d:
+                slot_ids.add(d["slot_id"])
+
+        book_cursor = self.db["bookings"].find(
+            {
+                "therapist_id": therapist_id,
+                "status": {"$in": ["pending", "confirmed"]},
+            },
+            {"slot_id": 1},
+        )
+        book_docs = await book_cursor.to_list(length=500)
+        for d in book_docs:
+            if "slot_id" in d:
+                slot_ids.add(d["slot_id"])
+
+        return slot_ids
+

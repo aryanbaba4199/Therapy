@@ -1,0 +1,70 @@
+{
+  "title": "Book Consultation",
+  "selectSlot": "Select an Available Slot",
+  "reservation": {
+    "title": "Complete Your Booking",
+    "slotHeld": "Slot reserved for you",
+    "expiresIn": "Time remaining to confirm:",
+    "expired": "Your reservation has expired. Please select a slot again.",
+    "cancel": "Release Slot",
+    "cancelled": "Reservation released.",
+    "failed": "Unable to hold this slot. It may have just been reserved by someone else."
+  },
+  "summary": {
+    "title": "Booking Summary",
+    "therapist": "Therapist",
+    "sessionMode": "Mode",
+    "date": "Date",
+    "time": "Time",
+    "duration": "Duration",
+    "fee": "Consultation Fee",
+    "minutes": "{{count}} mins",
+    "total": "Total Amount"
+  },
+  "confirm": {
+    "title": "Review & Confirm",
+    "notesLabel": "Notes for Therapist (Optional)",
+    "notesPlaceholder": "Describe what you would like to discuss or any special requirements...",
+    "terms": "By confirming, you agree to the consultation guidelines and cancellation policy.",
+    "submit": "Confirm Consultation",
+    "submitting": "Confirming...",
+    "success": "Your consultation has been successfully booked!",
+    "failed": "Failed to confirm booking. Please try again."
+  },
+  "success": {
+    "title": "Booking Confirmed!",
+    "subtitle": "Your appointment has been scheduled.",
+    "reference": "Booking Reference",
+    "viewBookings": "View My Bookings",
+    "bookAnother": "Book Another Session"
+  },
+  "history": {
+    "title": "My Bookings",
+    "upcoming": "Upcoming",
+    "past": "Past",
+    "cancelled": "Cancelled",
+    "noBookings": "No bookings found in this category.",
+    "details": "View Details",
+    "cancel": "Cancel Booking",
+    "cancelConfirm": "Are you sure you want to cancel this booking?",
+    "cancelReason": "Reason for cancellation",
+    "cancelReasonPlaceholder": "Please provide a reason...",
+    "cancelledSuccess": "Booking cancelled successfully."
+  },
+  "detail": {
+    "title": "Booking Details",
+    "status": "Status",
+    "scheduledFor": "Scheduled For",
+    "therapistDetails": "Therapist Details",
+    "clientDetails": "Client Details",
+    "notes": "Your Notes",
+    "cancellationReason": "Cancellation Reason"
+  },
+  "status": {
+    "pending": "Pending",
+    "confirmed": "Confirmed",
+    "cancelled": "Cancelled",
+    "completed": "Completed",
+    "no_show": "No Show"
+  }
+}

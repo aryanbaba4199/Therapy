@@ -72,6 +72,7 @@ export const baseApi = createApi({
     "Slot",
     "ExtraSlot",
     "Booking",
+    "Reservation",
     "Package",
     "Payment",
     "Session",

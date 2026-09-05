@@ -12,6 +12,7 @@ import {
 
 import enAuth from "./locales/en/auth.json";
 import enAvailability from "./locales/en/availability.json";
+import enBooking from "./locales/en/booking.json";
 import enCommon from "./locales/en/common.json";
 import enNavigation from "./locales/en/navigation.json";
 import enTherapist from "./locales/en/therapist.json";
@@ -19,6 +20,7 @@ import enValidation from "./locales/en/validation.json";
 
 import mlAuth from "./locales/ml/auth.json";
 import mlAvailability from "./locales/ml/availability.json";
+import mlBooking from "./locales/ml/booking.json";
 import mlCommon from "./locales/ml/common.json";
 import mlNavigation from "./locales/ml/navigation.json";
 import mlTherapist from "./locales/ml/therapist.json";
@@ -26,6 +28,7 @@ import mlValidation from "./locales/ml/validation.json";
 
 import taAuth from "./locales/ta/auth.json";
 import taAvailability from "./locales/ta/availability.json";
+import taBooking from "./locales/ta/booking.json";
 import taCommon from "./locales/ta/common.json";
 import taNavigation from "./locales/ta/navigation.json";
 import taTherapist from "./locales/ta/therapist.json";
@@ -39,6 +42,7 @@ export const resources = {
     validation: enValidation,
     therapist: enTherapist,
     availability: enAvailability,
+    booking: enBooking,
   },
   ml: {
     common: mlCommon,
@@ -47,6 +51,7 @@ export const resources = {
     validation: mlValidation,
     therapist: mlTherapist,
     availability: mlAvailability,
+    booking: mlBooking,
   },
   ta: {
     common: taCommon,
@@ -55,6 +60,7 @@ export const resources = {
     validation: taValidation,
     therapist: taTherapist,
     availability: taAvailability,
+    booking: taBooking,
   },
 } as const;
 

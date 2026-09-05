@@ -1,0 +1,416 @@
+"""Business domain workflows and concurrency orchestration for Reservations and Bookings."""
+
+import uuid
+from datetime import UTC, datetime, timedelta
+
+from pymongo.errors import DuplicateKeyError
+
+from app.common.exceptions.app_exceptions import (
+    BadRequestException,
+    ConflictException,
+    ForbiddenException,
+    NotFoundException,
+)
+from app.common.exceptions.error_codes import ErrorCode
+from app.common.pagination.pagination import PaginatedData, PaginationMeta, PaginationParams
+from app.core.config import Settings
+from app.modules.availability.availability_service import AvailabilityService
+from app.modules.booking.booking_constants import (
+    VALID_BOOKING_STATUS_TRANSITIONS,
+    BookingStatus,
+    ReservationStatus,
+)
+from app.modules.booking.booking_model import (
+    BookingInDB,
+    ClientSnapshot,
+    PricingSnapshot,
+    ReservationInDB,
+    TherapistSnapshot,
+)
+from app.modules.booking.booking_repository import BookingRepository
+from app.modules.booking.booking_schema import (
+    BookingDetailResponse,
+    BookingSummaryResponse,
+    CancelBookingRequest,
+    ConfirmBookingRequest,
+    CreateReservationRequest,
+    ReservationResponse,
+)
+from app.modules.therapist.therapist_constants import (
+    TherapistStatus,
+    TherapistVerificationStatus,
+)
+from app.modules.therapist.therapist_repository import TherapistRepository
+from app.modules.user.user_constants import UserRole
+from app.modules.user.user_model import UserInDB
+
+
+class BookingService:
+    """Domain service managing temporary slot reservations and confirmed bookings."""
+
+    def __init__(
+        self,
+        booking_repo: BookingRepository,
+        therapist_repo: TherapistRepository,
+        availability_service: AvailabilityService,
+        settings: Settings,
+    ) -> None:
+        self.booking_repo = booking_repo
+        self.therapist_repo = therapist_repo
+        self.availability_service = availability_service
+        self.settings = settings
+
+    async def create_reservation(
+        self, caller: UserInDB, req: CreateReservationRequest
+    ) -> ReservationResponse:
+        """Atomically reserve an available consultation slot with configurable TTL."""
+        # 1. Verify therapist exists and is active & verified
+        therapist = await self.therapist_repo.get_by_id(req.therapist_id)
+        if not therapist:
+            raise NotFoundException(
+                message="Therapist not found",
+                code=ErrorCode.THERAPIST_NOT_FOUND,
+            )
+        if (
+            therapist.status != TherapistStatus.ACTIVE
+            or therapist.verification.status != TherapistVerificationStatus.VERIFIED
+        ):
+            raise BadRequestException(
+                message="Therapist is not currently accepting bookings",
+                code=ErrorCode.INVALID_THERAPIST_STATUS,
+            )
+
+        # 2. Check if an active reservation or confirmed booking exists for this slot
+        now = datetime.now(UTC)
+        existing_res = await self.booking_repo.get_active_reservation_for_slot(
+            req.therapist_id, req.slot_id
+        )
+        if existing_res:
+            if existing_res.expires_at < now:
+                await self.booking_repo.update_reservation_status(
+                    existing_res.id, ReservationStatus.EXPIRED
+                )
+            elif existing_res.client_id == caller.id:
+                # Same user holds active reservation: return it
+                return ReservationResponse.from_db(existing_res)
+            else:
+                raise ConflictException(
+                    message="This slot is currently held by another client",
+                    code=ErrorCode.BOOKING_SLOT_UNAVAILABLE,
+                )
+
+        # 3. Check Phase 4 slot engine availability for the requested date and session mode
+        generated_slots = await self.availability_service.get_available_slots(
+            therapist_id=req.therapist_id,
+            target_date=req.slot_date,
+            session_mode=req.session_mode,
+            caller=caller,
+        )
+
+        matched_slot = next((s for s in generated_slots if s.id == req.slot_id), None)
+        if not matched_slot:
+            # Check if it was filtered out because it is reserved or booked
+            if existing_res and existing_res.expires_at >= now:
+                raise ConflictException(
+                    message="This slot is currently held by another client",
+                    code=ErrorCode.BOOKING_SLOT_UNAVAILABLE,
+                )
+            raise NotFoundException(
+                message="Slot not found or is no longer available",
+                code=ErrorCode.BOOKING_SLOT_NOT_FOUND,
+            )
+
+        # 4. Verify slot is not in the past
+        if matched_slot.start_at <= now:
+            raise BadRequestException(
+                message="Cannot reserve a slot in the past",
+                code=ErrorCode.DATE_IN_PAST,
+            )
+
+        # 5. Build new reservation with configured TTL
+        ttl_seconds = self.settings.booking_reservation_ttl_seconds
+        expires_at = now + timedelta(seconds=ttl_seconds)
+
+        reservation = ReservationInDB(
+            id=str(uuid.uuid4()),
+            slot_id=matched_slot.id,
+            therapist_id=matched_slot.therapist_id,
+            client_id=caller.id,
+            session_mode=matched_slot.session_mode,
+            start_at=matched_slot.start_at,
+            end_at=matched_slot.end_at,
+            duration_minutes=therapist.pricing.duration_minutes,
+            status=ReservationStatus.ACTIVE,
+            reserved_at=now,
+            expires_at=expires_at,
+            created_at=now,
+            updated_at=now,
+        )
+
+        # 6. Atomic insertion protected by MongoDB unique partial index
+        try:
+            saved = await self.booking_repo.create_reservation(reservation)
+        except DuplicateKeyError:
+            raise ConflictException(
+                message="This slot was just reserved by another client",
+                code=ErrorCode.BOOKING_SLOT_UNAVAILABLE,
+            ) from None
+
+        return ReservationResponse.from_db(saved)
+
+    async def get_reservation(
+        self, caller: UserInDB, reservation_id: str
+    ) -> ReservationResponse:
+        """Fetch reservation details with active countdown timer."""
+        reservation = await self.booking_repo.get_reservation_by_id(reservation_id)
+        if not reservation:
+            raise NotFoundException(
+                message="Reservation not found",
+                code=ErrorCode.BOOKING_RESERVATION_NOT_FOUND,
+            )
+
+        # Authorization: caller must be client, therapist, or staff
+        is_owner = caller.id == reservation.client_id
+        is_staff = any(
+            r in caller.roles
+            for r in [UserRole.ADMIN, UserRole.SUPER_ADMIN, UserRole.STAFF]
+        )
+        if not is_owner and not is_staff:
+            raise ForbiddenException(
+                message="You do not have permission to view this reservation",
+                code=ErrorCode.BOOKING_RESERVATION_FORBIDDEN,
+            )
+
+        # Auto-expire if past expiry
+        now = datetime.now(UTC)
+        if reservation.status == ReservationStatus.ACTIVE and reservation.expires_at < now:
+            updated = await self.booking_repo.update_reservation_status(
+                reservation.id, ReservationStatus.EXPIRED
+            )
+            if updated:
+                reservation = updated
+
+        return ReservationResponse.from_db(reservation)
+
+    async def cancel_reservation(self, caller: UserInDB, reservation_id: str) -> bool:
+        """Cancel and release an active slot reservation."""
+        reservation = await self.booking_repo.get_reservation_by_id(reservation_id)
+        if not reservation:
+            raise NotFoundException(
+                message="Reservation not found",
+                code=ErrorCode.BOOKING_RESERVATION_NOT_FOUND,
+            )
+
+        is_owner = caller.id == reservation.client_id
+        is_staff = any(
+            r in caller.roles
+            for r in [UserRole.ADMIN, UserRole.SUPER_ADMIN, UserRole.STAFF]
+        )
+        if not is_owner and not is_staff:
+            raise ForbiddenException(
+                message="You do not have permission to cancel this reservation",
+                code=ErrorCode.BOOKING_RESERVATION_FORBIDDEN,
+            )
+
+        if reservation.status == ReservationStatus.ACTIVE:
+            await self.booking_repo.update_reservation_status(
+                reservation.id, ReservationStatus.CANCELLED
+            )
+        return True
+
+    async def confirm_booking(
+        self, caller: UserInDB, req: ConfirmBookingRequest
+    ) -> BookingDetailResponse:
+        """Confirm booking from an active reservation. Idempotent on retry."""
+        # 1. Fetch reservation
+        reservation = await self.booking_repo.get_reservation_by_id(req.reservation_id)
+        if not reservation:
+            raise NotFoundException(
+                message="Reservation not found",
+                code=ErrorCode.BOOKING_RESERVATION_NOT_FOUND,
+            )
+
+        # 2. Ownership check
+        if reservation.client_id != caller.id:
+            raise ForbiddenException(
+                message="Reservation belongs to another client",
+                code=ErrorCode.BOOKING_RESERVATION_FORBIDDEN,
+            )
+
+        # 3. Idempotency: return existing booking if already confirmed
+        existing_booking = await self.booking_repo.get_booking_by_reservation_id(
+            req.reservation_id
+        )
+        if existing_booking:
+            return BookingDetailResponse.from_db(existing_booking)
+
+        # 4. Check reservation state and expiration
+        now = datetime.now(UTC)
+        if reservation.status != ReservationStatus.ACTIVE or reservation.expires_at < now:
+            if reservation.status == ReservationStatus.ACTIVE:
+                await self.booking_repo.update_reservation_status(
+                    reservation.id, ReservationStatus.EXPIRED
+                )
+            raise BadRequestException(
+                message="Reservation has expired or is no longer active",
+                code=ErrorCode.BOOKING_RESERVATION_EXPIRED,
+            )
+
+        # 5. Fetch therapist for snapshots
+        therapist = await self.therapist_repo.get_by_id(reservation.therapist_id)
+        if not therapist:
+            raise NotFoundException(
+                message="Therapist profile not found",
+                code=ErrorCode.THERAPIST_NOT_FOUND,
+            )
+
+        pricing_snapshot = PricingSnapshot(
+            amount=therapist.pricing.amount,
+            currency=therapist.pricing.currency,
+            duration_minutes=reservation.duration_minutes,
+        )
+        therapist_snapshot = TherapistSnapshot(
+            id=therapist.id,
+            display_name=therapist.display_name,
+            designation=therapist.designation,
+            specialization=therapist.specialization.value,
+            profile_image_url=therapist.profile_image_url,
+        )
+        client_snapshot = ClientSnapshot(
+            id=caller.id,
+            first_name=caller.first_name,
+            last_name=caller.last_name,
+            email=caller.email,
+            phone=caller.phone,
+        )
+
+        booking = BookingInDB(
+            id=str(uuid.uuid4()),
+            client_id=caller.id,
+            therapist_id=therapist.id,
+            slot_id=reservation.slot_id,
+            reservation_id=reservation.id,
+            session_mode=reservation.session_mode,
+            start_at=reservation.start_at,
+            end_at=reservation.end_at,
+            duration_minutes=reservation.duration_minutes,
+            status=BookingStatus.CONFIRMED,
+            pricing=pricing_snapshot,
+            therapist=therapist_snapshot,
+            client=client_snapshot,
+            notes=req.notes,
+            created_at=now,
+            updated_at=now,
+        )
+
+        try:
+            saved_booking = await self.booking_repo.create_booking(booking)
+        except DuplicateKeyError:
+            raise ConflictException(
+                message="This slot has already been booked",
+                code=ErrorCode.BOOKING_ALREADY_EXISTS,
+            ) from None
+
+        # 6. Transition reservation to CONVERTED
+        await self.booking_repo.update_reservation_status(
+            reservation.id, ReservationStatus.CONVERTED
+        )
+
+        return BookingDetailResponse.from_db(saved_booking)
+
+    async def list_client_bookings(
+        self,
+        caller: UserInDB,
+        pagination: PaginationParams,
+        status_filter: list[BookingStatus] | None = None,
+    ) -> PaginatedData[BookingSummaryResponse]:
+        """List paginated bookings for current authenticated client."""
+        skip = (pagination.page - 1) * pagination.limit
+        bookings, total = await self.booking_repo.find_client_bookings(
+            client_id=caller.id,
+            status_filter=status_filter,
+            skip=skip,
+            limit=pagination.limit,
+        )
+
+        meta = PaginationMeta.create(
+            page=pagination.page,
+            limit=pagination.limit,
+            total_items=total,
+        )
+        items = [BookingSummaryResponse.from_db(b) for b in bookings]
+        return PaginatedData(items=items, pagination=meta)
+
+    async def get_booking_detail(
+        self, caller: UserInDB, booking_id: str
+    ) -> BookingDetailResponse:
+        """Retrieve booking detail by UUID with authorization."""
+        booking = await self.booking_repo.get_booking_by_id(booking_id)
+        if not booking:
+            raise NotFoundException(
+                message="Booking not found",
+                code=ErrorCode.BOOKING_NOT_FOUND,
+            )
+
+        # Authorized if client, therapist, or staff
+        is_client = caller.id == booking.client_id
+        is_staff = any(
+            r in caller.roles
+            for r in [UserRole.ADMIN, UserRole.SUPER_ADMIN, UserRole.STAFF]
+        )
+        if not is_client and not is_staff:
+            # Check if caller is the therapist owner
+            therapist = await self.therapist_repo.get_by_id(booking.therapist_id)
+            if not therapist or therapist.user_id != caller.id:
+                raise ForbiddenException(
+                    message="You do not have permission to view this booking",
+                    code=ErrorCode.FORBIDDEN,
+                )
+
+        return BookingDetailResponse.from_db(booking)
+
+    async def cancel_booking(
+        self, caller: UserInDB, booking_id: str, req: CancelBookingRequest
+    ) -> BookingDetailResponse:
+        """Cancel a confirmed booking."""
+        booking = await self.booking_repo.get_booking_by_id(booking_id)
+        if not booking:
+            raise NotFoundException(
+                message="Booking not found",
+                code=ErrorCode.BOOKING_NOT_FOUND,
+            )
+
+        is_client = caller.id == booking.client_id
+        is_staff = any(
+            r in caller.roles
+            for r in [UserRole.ADMIN, UserRole.SUPER_ADMIN, UserRole.STAFF]
+        )
+        if not is_client and not is_staff:
+            therapist = await self.therapist_repo.get_by_id(booking.therapist_id)
+            if not therapist or therapist.user_id != caller.id:
+                raise ForbiddenException(
+                    message="You do not have permission to cancel this booking",
+                    code=ErrorCode.FORBIDDEN,
+                )
+
+        # Validate transition
+        allowed_transitions = VALID_BOOKING_STATUS_TRANSITIONS.get(booking.status, set())
+        if BookingStatus.CANCELLED not in allowed_transitions:
+            raise BadRequestException(
+                message=f"Cannot cancel a booking in '{booking.status}' status",
+                code=ErrorCode.BOOKING_CANCEL_NOT_ALLOWED,
+            )
+
+        updated = await self.booking_repo.update_booking_status(
+            booking_id=booking_id,
+            status=BookingStatus.CANCELLED,
+            cancellation_reason=req.reason,
+            cancelled_by=caller.id,
+        )
+        if not updated:
+            raise NotFoundException(
+                message="Booking not found during update",
+                code=ErrorCode.BOOKING_NOT_FOUND,
+            )
+
+        return BookingDetailResponse.from_db(updated)

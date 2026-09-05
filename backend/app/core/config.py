@@ -53,10 +53,14 @@ class Settings(BaseSettings):
     otp_expire_seconds: int = Field(default=300, alias="OTP_EXPIRE_SECONDS")
     otp_resend_cooldown_seconds: int = Field(default=30, alias="OTP_RESEND_COOLDOWN_SECONDS")
     otp_max_attempts: int = Field(default=5, alias="OTP_MAX_ATTEMPTS")
-    otp_provider: Literal["mock", "sms", "whatsapp"] = Field(default="mock", alias="OTP_PROVIDER")
+    # Booking & Reservation settings
+    booking_reservation_ttl_seconds: int = Field(
+        default=900, alias="BOOKING_RESERVATION_TTL_SECONDS"
+    )
 
     # Cookie settings for Refresh Token
     refresh_cookie_name: str = Field(default="oppam_refresh_token", alias="REFRESH_COOKIE_NAME")
+
     refresh_cookie_secure: bool = Field(default=False, alias="REFRESH_COOKIE_SECURE")
     refresh_cookie_samesite: Literal["lax", "strict", "none"] = Field(
         default="lax", alias="REFRESH_COOKIE_SAMESITE"

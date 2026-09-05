@@ -1,6 +1,6 @@
-import React from "react";
+import React, { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Link as RouterLink, useParams } from "react-router-dom";
+import { Link as RouterLink, useNavigate, useParams } from "react-router-dom";
 import {
   Alert,
   Avatar,
@@ -25,6 +25,8 @@ import {
   FaUser,
 } from "react-icons/fa";
 import { AvailabilityCalendar, SlotGrid, useSlots } from "../../availability";
+import { useCreateReservationMutation } from "../../booking/api/booking_api";
+import { useAuth } from "../../auth/hooks/useAuth";
 import { useGetTherapistQuery } from "../api/therapist_api";
 import { TherapistAudioPlayer } from "../components/TherapistAudioPlayer";
 import {
@@ -35,6 +37,11 @@ import {
 
 export const TherapistDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
+  const { isAuthenticated } = useAuth();
+  const [bookingError, setBookingError] = useState<string | null>(null);
+  const [createReservation, { isLoading: isReserving }] =
+    useCreateReservationMutation();
   const { t } = useTranslation(["therapist", "availability", "common"]);
   const {
     data: response,
@@ -457,13 +464,25 @@ export const TherapistDetailPage: React.FC = () => {
                   </Box>
                 )}
 
+                {bookingError && (
+                  <Alert severity="error" sx={{ mb: 2, borderRadius: 2 }}>
+                    {bookingError}
+                  </Alert>
+                )}
+
                 <Button
                   variant="contained"
                   color="primary"
                   size="large"
                   fullWidth
-                  disabled={!selectedSlot}
-                  startIcon={<FaCalendarCheck />}
+                  disabled={!selectedSlot || isReserving}
+                  startIcon={
+                    isReserving ? (
+                      <CircularProgress size={18} color="inherit" />
+                    ) : (
+                      <FaCalendarCheck />
+                    )
+                  }
                   sx={{
                     py: 1.5,
                     borderRadius: 2.5,
@@ -471,16 +490,40 @@ export const TherapistDetailPage: React.FC = () => {
                     fontSize: "1rem",
                     textTransform: "none",
                   }}
-                  onClick={() => {
-                    // Future Phase 5 booking flow entrypoint
-                    alert(
-                      `${t("availability:bookSlot")}: Slot ID ${selectedSlot?.id}`
-                    );
+                  onClick={async () => {
+                    if (!selectedSlot) return;
+                    if (!isAuthenticated) {
+                      navigate(`/login?redirect=/therapists/${therapist.id}`);
+                      return;
+                    }
+                    try {
+                      setBookingError(null);
+                      const res = await createReservation({
+                        therapist_id: therapist.id,
+                        slot_id: selectedSlot.id,
+                        slot_date: selectedDate,
+                        session_mode: selectedSlot.session_mode,
+                      }).unwrap();
+
+                      if (res.data?.id) {
+                        navigate(
+                          `/bookings/checkout?reservationId=${res.data.id}`
+                        );
+                      }
+                    } catch (err: unknown) {
+                      const errorObj = err as { data?: { message?: string } };
+                      setBookingError(
+                        errorObj.data?.message ||
+                          "Unable to hold this slot. It may have just been reserved."
+                      );
+                    }
                   }}
                 >
-                  {selectedSlot
-                    ? t("availability:bookSlot")
-                    : t("availability:selectDate")}
+                  {isReserving
+                    ? "Reserving Slot..."
+                    : selectedSlot
+                      ? t("availability:bookSlot")
+                      : t("availability:selectDate")}
                 </Button>
               </CardContent>
             </Card>
