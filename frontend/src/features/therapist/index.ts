@@ -9,3 +9,4 @@ export * from "./components/TherapistSort";
 export * from "./components/TherapistFilters";
 export * from "./pages/TherapistListPage";
 export * from "./pages/TherapistDetailPage";
+export { TherapistOnboardingPage } from "../operations/pages/TherapistOnboardingPage";

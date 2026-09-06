@@ -1021,7 +1021,7 @@ export const TherapistOnboardingPage: React.FC = () => {
             </div>
           </div>
         </DialogContent>
-        <DialogActions className="p-4 gap-2">
+        <DialogActions className="p-4 gap-2 flex-wrap">
           <Button
             variant="outlined"
             startIcon={copied ? <FiCheck /> : <FiCopy />}
@@ -1030,10 +1030,17 @@ export const TherapistOnboardingPage: React.FC = () => {
             {copied ? "Copied!" : "Copy Credentials"}
           </Button>
           <Button
+            variant="outlined"
+            color="primary"
+            onClick={() => navigate("/therapists")}
+          >
+            View Directory
+          </Button>
+          <Button
             variant="contained"
             onClick={() => navigate("/operations/therapists")}
           >
-            {t("operations:onboarding.success.done", "Done & Return")}
+            {t("operations:onboarding.success.done", "Manage Therapists")}
           </Button>
         </DialogActions>
       </Dialog>

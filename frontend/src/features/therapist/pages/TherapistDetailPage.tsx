@@ -44,7 +44,8 @@ import {
 export const TherapistDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, hasRole } = useAuth();
+  const canManageTherapist = hasRole("super_admin") || hasRole("admin");
   const [bookingError, setBookingError] = useState<string | null>(null);
   const [createReservation, { isLoading: isReserving }] =
     useCreateReservationMutation();
@@ -122,8 +123,17 @@ export const TherapistDetailPage: React.FC = () => {
   return (
     <Box sx={{ bgcolor: "grey.50", minHeight: "100vh", py: 6 }}>
       <Container maxWidth="lg">
-        {/* Navigation Breadcrumb */}
-        <Box sx={{ mb: 4 }}>
+        {/* Navigation Breadcrumb & Admin Controls */}
+        <Box
+          sx={{
+            mb: 4,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            flexWrap: "wrap",
+            gap: 2,
+          }}
+        >
           <Button
             component={RouterLink}
             to="/therapists"
@@ -137,6 +147,37 @@ export const TherapistDetailPage: React.FC = () => {
           >
             {t("therapist:title")}
           </Button>
+
+          {canManageTherapist && (
+            <Stack direction="row" spacing={1.5}>
+              <Button
+                variant="outlined"
+                color="secondary"
+                size="small"
+                onClick={() => navigate("/operations/therapists")}
+                sx={{
+                  borderRadius: 2,
+                  textTransform: "none",
+                  fontWeight: 600,
+                }}
+              >
+                Therapist Operations
+              </Button>
+              <Button
+                variant="contained"
+                color="primary"
+                size="small"
+                onClick={() => navigate("/admin/therapists/new")}
+                sx={{
+                  borderRadius: 2,
+                  textTransform: "none",
+                  fontWeight: 600,
+                }}
+              >
+                + Add Therapist
+              </Button>
+            </Stack>
+          )}
         </Box>
 
         <Grid container spacing={4}>

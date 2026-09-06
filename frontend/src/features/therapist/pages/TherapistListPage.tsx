@@ -1,5 +1,6 @@
 import React from "react";
 import { useTranslation } from "react-i18next";
+import { useNavigate } from "react-router-dom";
 import {
   Alert,
   Box,
@@ -11,7 +12,8 @@ import {
   Stack,
   Typography,
 } from "@mui/material";
-import { FaExclamationTriangle, FaSearch } from "react-icons/fa";
+import { FaExclamationTriangle, FaPlus, FaSearch } from "react-icons/fa";
+import { useAuth } from "@/features/auth/hooks/useAuth";
 import { TherapistCard } from "../components/TherapistCard";
 import { TherapistFilters } from "../components/TherapistFilters";
 import { TherapistSearch } from "../components/TherapistSearch";
@@ -20,6 +22,9 @@ import { useTherapists } from "../hooks/useTherapists";
 
 export const TherapistListPage: React.FC = () => {
   const { t } = useTranslation(["therapist", "common"]);
+  const navigate = useNavigate();
+  const { hasRole } = useAuth();
+  const canOnboardTherapist = hasRole("super_admin") || hasRole("admin");
   const {
     filters,
     setFilters,
@@ -38,26 +43,60 @@ export const TherapistListPage: React.FC = () => {
     <Box sx={{ bgcolor: "grey.50", minHeight: "100vh", py: 6 }}>
       <Container maxWidth="xl">
         {/* Page Hero Title */}
-        <Box sx={{ mb: 5, textAlign: { xs: "center", md: "left" } }}>
-          <Typography
-            variant="h3"
-            component="h1"
-            sx={{
-              fontWeight: 800,
-              color: "text.primary",
-              mb: 1.5,
-              fontSize: { xs: "2rem", md: "2.75rem" },
-            }}
-          >
-            {t("therapist:title")}
-          </Typography>
-          <Typography
-            variant="body1"
-            color="text.secondary"
-            sx={{ maxWidth: 700, fontSize: "1.1rem" }}
-          >
-            {t("therapist:subtitle")}
-          </Typography>
+        <Box
+          sx={{
+            mb: 5,
+            display: "flex",
+            flexDirection: { xs: "column", md: "row" },
+            alignItems: { xs: "center", md: "flex-start" },
+            justifyContent: "space-between",
+            gap: 2,
+            textAlign: { xs: "center", md: "left" },
+          }}
+        >
+          <Box>
+            <Typography
+              variant="h3"
+              component="h1"
+              sx={{
+                fontWeight: 800,
+                color: "text.primary",
+                mb: 1.5,
+                fontSize: { xs: "2rem", md: "2.75rem" },
+              }}
+            >
+              {t("therapist:title")}
+            </Typography>
+            <Typography
+              variant="body1"
+              color="text.secondary"
+              sx={{ maxWidth: 700, fontSize: "1.1rem" }}
+            >
+              {t("therapist:subtitle")}
+            </Typography>
+          </Box>
+
+          {canOnboardTherapist && (
+            <Button
+              variant="contained"
+              color="primary"
+              startIcon={<FaPlus />}
+              onClick={() => navigate("/admin/therapists/new")}
+              sx={{
+                borderRadius: 3,
+                px: 3,
+                py: 1.5,
+                fontWeight: 700,
+                textTransform: "none",
+                fontSize: "0.95rem",
+                boxShadow: 2,
+                whiteSpace: "nowrap",
+                alignSelf: { xs: "center", md: "flex-start" },
+              }}
+            >
+              {t("therapist:addTherapist", "Add Therapist")}
+            </Button>
+          )}
         </Box>
 
         {/* Top Search & Sort Bar */}

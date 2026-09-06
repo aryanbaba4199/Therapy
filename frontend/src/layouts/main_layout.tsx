@@ -43,6 +43,14 @@ export const MainLayout: React.FC = () => {
             >
               {t("navigation:therapists")}
             </Link>
+            {(hasRole("super_admin") || hasRole("admin")) && (
+              <Link
+                to="/operations/therapists"
+                className="text-sm font-semibold text-purple-700 hover:text-purple-900 transition-colors"
+              >
+                Therapists Management
+              </Link>
+            )}
             <span className="text-sm font-semibold text-gray-400 cursor-not-allowed">
               {t("navigation:services")}
             </span>
@@ -66,6 +74,14 @@ export const MainLayout: React.FC = () => {
                     className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold text-teal-900 bg-teal-100/70 hover:bg-teal-200 transition-colors"
                   >
                     <span>Therapist Portal</span>
+                  </Link>
+                )}
+                {(hasRole("super_admin") || hasRole("admin")) && (
+                  <Link
+                    to="/admin/therapists/new"
+                    className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold text-white bg-oppam-dark hover:bg-neutral-800 transition-colors shadow-xs"
+                  >
+                    <span>+ Onboard Therapist</span>
                   </Link>
                 )}
                 {(hasRole("staff") ||
