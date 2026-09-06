@@ -18,6 +18,14 @@ from app.modules.therapist.therapist_constants import SessionMode
 DATE_REGEX = re.compile(r"^\d{4}-\d{2}-\d{2}$")
 
 
+class BookingMeetingResponse(BaseModel):
+    """Sanitized meeting details attached to consultation booking."""
+
+    provider: str
+    status: str
+    join_url: str | None = None
+
+
 class CreateReservationRequest(BaseModel):
     """Payload to create a temporary slot reservation."""
 
@@ -97,9 +105,16 @@ class BookingSummaryResponse(BaseModel):
     pricing: PricingSnapshot
     therapist: TherapistSnapshot
     created_at: datetime
+    session_id: str | None = None
+    meeting: BookingMeetingResponse | None = None
 
     @classmethod
-    def from_db(cls, doc: BookingInDB) -> "BookingSummaryResponse":
+    def from_db(
+        cls,
+        doc: BookingInDB,
+        session_id: str | None = None,
+        meeting: BookingMeetingResponse | None = None,
+    ) -> "BookingSummaryResponse":
         return cls(
             id=doc.id,
             client_id=doc.client_id,
@@ -112,6 +127,8 @@ class BookingSummaryResponse(BaseModel):
             pricing=doc.pricing,
             therapist=doc.therapist,
             created_at=doc.created_at,
+            session_id=session_id,
+            meeting=meeting,
         )
 
 
@@ -136,9 +153,16 @@ class BookingDetailResponse(BaseModel):
     cancelled_at: datetime | None
     created_at: datetime
     updated_at: datetime
+    session_id: str | None = None
+    meeting: BookingMeetingResponse | None = None
 
     @classmethod
-    def from_db(cls, doc: BookingInDB) -> "BookingDetailResponse":
+    def from_db(
+        cls,
+        doc: BookingInDB,
+        session_id: str | None = None,
+        meeting: BookingMeetingResponse | None = None,
+    ) -> "BookingDetailResponse":
         return cls(
             id=doc.id,
             client_id=doc.client_id,
@@ -158,4 +182,6 @@ class BookingDetailResponse(BaseModel):
             cancelled_at=doc.cancelled_at,
             created_at=doc.created_at,
             updated_at=doc.updated_at,
+            session_id=session_id,
+            meeting=meeting,
         )

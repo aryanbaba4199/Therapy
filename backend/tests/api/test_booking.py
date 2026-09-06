@@ -238,7 +238,23 @@ async def test_confirm_booking_and_idempotency(client: AsyncClient, mock_db: Any
     assert booking_data["status"] == "confirmed"
     assert booking_data["pricing"]["amount"] == 1200
     assert booking_data["therapist"]["display_name"] == "Dr. Suresh Gopi"
+    assert booking_data.get("session_id") is not None
+    assert booking_data.get("meeting") is not None
+    assert booking_data["meeting"]["status"] == "ready"
+    assert "meet.google.com" in booking_data["meeting"]["join_url"]
     booking_id = booking_data["id"]
+
+    # Verify lookup by reservation_id succeeds and includes meeting
+    res_lookup = await client.get(f"/api/v1/bookings/{reservation_id}", headers=client_headers)
+    assert res_lookup.status_code == 200
+    assert res_lookup.json()["data"]["id"] == booking_id
+    assert res_lookup.json()["data"]["meeting"]["status"] == "ready"
+
+    # Verify lookup by booking_id succeeds and includes meeting
+    book_lookup = await client.get(f"/api/v1/bookings/{booking_id}", headers=client_headers)
+    assert book_lookup.status_code == 200
+    assert book_lookup.json()["data"]["id"] == booking_id
+    assert book_lookup.json()["data"]["meeting"]["status"] == "ready"
 
     confirm_again = await client.post(
         "/api/v1/bookings/confirm",
@@ -247,6 +263,7 @@ async def test_confirm_booking_and_idempotency(client: AsyncClient, mock_db: Any
     )
     assert confirm_again.status_code in (200, 201)
     assert confirm_again.json()["data"]["id"] == booking_id
+    assert confirm_again.json()["data"]["meeting"] is not None
 
     slots_res = await client.get(
         f"/api/v1/therapists/{therapist_id}/slots?date={slot_date}",

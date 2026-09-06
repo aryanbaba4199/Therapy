@@ -32,6 +32,7 @@ from app.modules.booking.booking_model import (
 from app.modules.booking.booking_repository import BookingRepository
 from app.modules.booking.booking_schema import (
     BookingDetailResponse,
+    BookingMeetingResponse,
     BookingSummaryResponse,
     CancelBookingRequest,
     ConfirmBookingRequest,
@@ -77,6 +78,33 @@ class BookingService:
             )
 
 
+
+    def _extract_meeting_response(self, meeting_obj: Any) -> BookingMeetingResponse | None:
+        """Helper to safely construct BookingMeetingResponse from doc or model."""
+        if not meeting_obj:
+            return None
+        if isinstance(meeting_obj, dict):
+            provider = str(meeting_obj.get("provider", ""))
+            status = str(meeting_obj.get("status", ""))
+            join_url = meeting_obj.get("join_url")
+        else:
+            provider = str(getattr(meeting_obj, "provider", ""))
+            status = str(getattr(meeting_obj, "status", ""))
+            join_url = getattr(meeting_obj, "join_url", None)
+        if not provider or not status:
+            return None
+        return BookingMeetingResponse(provider=provider, status=status, join_url=join_url)
+
+    async def _build_booking_detail_response(self, booking: BookingInDB) -> BookingDetailResponse:
+        """Helper to construct BookingDetailResponse with linked session and Google Meet details."""
+        session_id = None
+        meeting = None
+        if self.session_service:
+            sess = await self.session_service.session_repo.get_session_by_booking_id(booking.id)
+            if sess:
+                session_id = sess.id
+                meeting = self._extract_meeting_response(sess.meeting)
+        return BookingDetailResponse.from_db(booking, session_id=session_id, meeting=meeting)
 
     async def create_reservation(
         self, caller: UserInDB, req: CreateReservationRequest
@@ -269,7 +297,7 @@ class BookingService:
             req.reservation_id
         )
         if existing_booking:
-            return BookingDetailResponse.from_db(existing_booking)
+            return await self._build_booking_detail_response(existing_booking)
 
         # 4. Check reservation state and expiration with atomic transition
         now = datetime.now(UTC)
@@ -295,7 +323,7 @@ class BookingService:
                 req.reservation_id
             )
             if existing_booking:
-                return BookingDetailResponse.from_db(existing_booking)
+                return await self._build_booking_detail_response(existing_booking)
             raise BadRequestException(
                 message="Reservation has expired or is no longer active",
                 code=ErrorCode.BOOKING_RESERVATION_EXPIRED,
@@ -353,7 +381,7 @@ class BookingService:
         except DuplicateKeyError:
             existing = await self.booking_repo.get_booking_by_reservation_id(reservation.id)
             if existing:
-                return BookingDetailResponse.from_db(existing)
+                return await self._build_booking_detail_response(existing)
             raise ConflictException(
                 message="This slot has already been booked",
                 code=ErrorCode.BOOKING_ALREADY_EXISTS,
@@ -363,7 +391,7 @@ class BookingService:
         if self.session_service:
             await self.session_service.create_session_for_booking(saved_booking)
 
-        return BookingDetailResponse.from_db(saved_booking)
+        return await self._build_booking_detail_response(saved_booking)
 
 
 
@@ -382,12 +410,29 @@ class BookingService:
             limit=pagination.limit,
         )
 
+        session_map: dict[str, Any] = {}
+        if self.session_service and bookings:
+            booking_ids = [b.id for b in bookings]
+            cursor = self.session_service.session_repo.sessions.find(
+                {"booking_id": {"$in": booking_ids}}
+            )
+            async for s_doc in cursor:
+                session_map[s_doc["booking_id"]] = s_doc
+
         meta = PaginationMeta.create(
             page=pagination.page,
             limit=pagination.limit,
             total_items=total,
         )
-        items = [BookingSummaryResponse.from_db(b) for b in bookings]
+        items = []
+        for b in bookings:
+            s_doc = session_map.get(b.id)
+            s_id = s_doc.get("id") if s_doc else None
+            meeting_raw = s_doc.get("meeting") if s_doc else None
+            m_resp = self._extract_meeting_response(meeting_raw)
+            items.append(
+                BookingSummaryResponse.from_db(b, session_id=s_id, meeting=m_resp)
+            )
         return PaginatedData(items=items, pagination=meta)
 
     async def get_booking_detail(
@@ -418,7 +463,17 @@ class BookingService:
                     code=ErrorCode.FORBIDDEN,
                 )
 
-        return BookingDetailResponse.from_db(booking)
+        session_id = None
+        meeting = None
+        if self.session_service:
+            sess = await self.session_service.session_repo.get_session_by_booking_id(booking.id)
+            if sess:
+                session_id = sess.id
+                meeting = self._extract_meeting_response(sess.meeting)
+
+        return BookingDetailResponse.from_db(
+            booking, session_id=session_id, meeting=meeting
+        )
 
     async def cancel_booking(
         self, caller: UserInDB, booking_id: str, req: CancelBookingRequest

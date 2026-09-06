@@ -59,6 +59,8 @@ export interface CancelBookingRequest {
   reason?: string;
 }
 
+import type { SessionMeetingResponse } from "@/features/session/types/session_types";
+
 export interface BookingSummary {
   id: string;
   client_id: string;
@@ -70,6 +72,8 @@ export interface BookingSummary {
   status: BookingStatus;
   pricing: PricingSnapshot;
   therapist: TherapistSnapshot;
+  session_id?: string | null;
+  meeting?: SessionMeetingResponse | null;
   created_at: string;
 }
 
@@ -90,6 +94,8 @@ export interface BookingDetail {
   notes?: string | null;
   cancellation_reason?: string | null;
   cancelled_at?: string | null;
+  session_id?: string | null;
+  meeting?: SessionMeetingResponse | null;
   created_at: string;
   updated_at: string;
 }

@@ -3,6 +3,7 @@ import { Box, Card, CardContent, Typography, Button } from "@mui/material";
 import { FiCalendar, FiClock, FiVideo, FiMapPin } from "react-icons/fi";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
+import { JoinMeetingButton } from "@/features/session/components/JoinMeetingButton";
 import type { BookingSummary } from "../types/booking.types";
 import { BookingStatusChip } from "./BookingStatusChip";
 
@@ -78,7 +79,16 @@ export const BookingCard: React.FC<BookingCardProps> = ({
           </Box>
         </Box>
 
-        <Box className="flex items-center gap-3 self-end md:self-center">
+        <Box className="flex flex-wrap items-center gap-2.5 self-end md:self-center">
+          {booking.session_mode === "online" && booking.status === "confirmed" && (
+            <JoinMeetingButton
+              sessionId={booking.session_id || ""}
+              sessionMode={booking.session_mode}
+              meeting={booking.meeting}
+              size="small"
+            />
+          )}
+
           {isUpcoming && onCancelClick && (
             <Button
               variant="outlined"

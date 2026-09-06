@@ -28,6 +28,7 @@ import {
   useGetBookingDetailQuery,
 } from "../api/booking_api";
 import { BookingStatusChip } from "../components/BookingStatusChip";
+import { JoinMeetingButton } from "@/features/session/components/JoinMeetingButton";
 
 export const BookingDetailPage: React.FC = () => {
   const { t } = useTranslation("booking");
@@ -198,6 +199,25 @@ export const BookingDetailPage: React.FC = () => {
                 </Box>
               </Box>
             </Box>
+
+            {booking.session_mode === "online" && (
+              <Box className="p-4 bg-teal-50/80 rounded-xl border border-teal-200 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <Box className="space-y-0.5">
+                  <Typography variant="subtitle2" className="font-bold text-teal-950 flex items-center gap-2">
+                    <FiVideo className="text-teal-600 w-5 h-5" />
+                    Google Meet Video Consultation
+                  </Typography>
+                  <Typography variant="caption" className="text-teal-800">
+                    Join link generated automatically for your online therapy session.
+                  </Typography>
+                </Box>
+                <JoinMeetingButton
+                  sessionId={booking.session_id || ""}
+                  sessionMode={booking.session_mode}
+                  meeting={booking.meeting}
+                />
+              </Box>
+            )}
 
             <Divider />
 

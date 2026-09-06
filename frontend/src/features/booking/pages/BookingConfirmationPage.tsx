@@ -9,9 +9,10 @@ import {
   Divider,
   Typography,
 } from "@mui/material";
-import { FiCalendar, FiCheck, FiClock, FiList, FiPlus } from "react-icons/fi";
+import { FiCalendar, FiCheck, FiClock, FiList, FiPlus, FiVideo } from "react-icons/fi";
 import { useTranslation } from "react-i18next";
 import { useNavigate, useSearchParams } from "react-router-dom";
+import { JoinMeetingButton } from "@/features/session/components/JoinMeetingButton";
 import { useGetBookingDetailQuery } from "../api/booking_api";
 
 export const BookingConfirmationPage: React.FC = () => {
@@ -133,6 +134,24 @@ export const BookingConfirmationPage: React.FC = () => {
                 ₹{booking.pricing.amount}
               </span>
             </Box>
+
+            {booking.session_mode === "online" && (
+              <>
+                <Divider className="my-2" />
+                <Box className="p-4 bg-teal-50/80 rounded-xl border border-teal-200 space-y-3">
+                  <Box className="flex items-center gap-2 text-teal-900 font-semibold text-sm">
+                    <FiVideo className="text-teal-600 w-4 h-4" />
+                    <span>Google Meet Consultation</span>
+                  </Box>
+                  <JoinMeetingButton
+                    sessionId={booking.session_id || ""}
+                    sessionMode={booking.session_mode}
+                    meeting={booking.meeting}
+                    fullWidth
+                  />
+                </Box>
+              </>
+            )}
           </Box>
         </CardContent>
       </Card>
