@@ -58,5 +58,10 @@
   },
   "noTodaySessions": "No sessions scheduled for today.",
   "noSessions": "No sessions found.",
-  "backToDashboard": "Back to Dashboard"
+  "backToDashboard": "Back to Dashboard",
+  "joinMeeting": "Join Google Meet",
+  "meetingPreparing": "Meeting is being prepared...",
+  "meetingFailed": "Meeting unavailable",
+  "retryMeeting": "Retry Meeting Setup",
+  "retryingMeeting": "Retrying..."
 }

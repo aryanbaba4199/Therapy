@@ -6,7 +6,33 @@ from typing import Any
 from pydantic import BaseModel, Field, field_validator
 
 from app.common.utils.datetime_utils import ensure_utc, utc_now
-from app.modules.session.session_constants import AttendanceStatus, GoalStatus, SessionStatus
+from app.modules.session.session_constants import (
+    AttendanceStatus,
+    GoalStatus,
+    MeetingProviderType,
+    MeetingStatus,
+    SessionStatus,
+)
+
+
+class SessionMeetingInDB(BaseModel):
+    """Meeting persistence model stored within `sessions.meeting`."""
+
+    provider: MeetingProviderType = Field(default=MeetingProviderType.GOOGLE_MEET)
+    status: MeetingStatus = Field(default=MeetingStatus.NOT_STARTED)
+    join_url: str | None = Field(default=None, description="Public Google Meet video conference URL")
+    provider_event_id: str | None = Field(default=None, description="Google Calendar event ID")
+    conference_id: str | None = Field(default=None, description="Google Meet conference ID")
+    error_message: str | None = Field(default=None, description="Last provisioning error details if failed")
+    claimed_by: str | None = Field(default=None, description="Worker ID currently claiming provisioning lock")
+    claimed_at: datetime | None = Field(default=None, description="Timestamp of active provisioning lock claim")
+    created_at: datetime = Field(default_factory=utc_now)
+    updated_at: datetime = Field(default_factory=utc_now)
+
+    @field_validator("claimed_at", "created_at", "updated_at", mode="after")
+    @classmethod
+    def ensure_tz(cls, v: datetime | None) -> datetime | None:
+        return ensure_utc(v) if v is not None else None
 
 
 class SessionInDB(BaseModel):
@@ -27,6 +53,7 @@ class SessionInDB(BaseModel):
     ended_at: datetime | None = Field(default=None, description="Actual completion time in UTC")
 
     attendance: AttendanceStatus = Field(default=AttendanceStatus.UNKNOWN)
+    meeting: SessionMeetingInDB | None = Field(default=None, description="Google Meet meeting details")
 
     created_at: datetime = Field(default_factory=utc_now)
     updated_at: datetime = Field(default_factory=utc_now)
@@ -43,6 +70,7 @@ class SessionInDB(BaseModel):
     @classmethod
     def ensure_tz(cls, v: datetime | None) -> datetime | None:
         return ensure_utc(v) if v is not None else None
+
 
     def model_dump(self, *args: Any, **kwargs: Any) -> dict[str, Any]:
         d = super().model_dump(*args, **kwargs)

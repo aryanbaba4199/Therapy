@@ -122,3 +122,9 @@ class SessionController:
             caller=caller, status=status, skip=skip, limit=limit
         )
         return success_response(data=res)
+
+    async def retry_meeting(
+        self, caller: UserInDB, session_id: str
+    ) -> ApiResponse[SessionResponse]:
+        res = await self.service.retry_meeting_provisioning(session_id=session_id, caller=caller)
+        return success_response(data=res, message="Meeting provisioning retried successfully")

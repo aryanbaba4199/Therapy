@@ -28,6 +28,7 @@ import {
   useListMySessionsQuery,
 } from "../api/session_api";
 import { ReviewFormModal } from "../../review";
+import { JoinMeetingButton } from "../components/JoinMeetingButton";
 import { SessionStatusChip } from "../components/SessionStatusChip";
 import type {
   ClientSessionResponse,
@@ -170,30 +171,42 @@ export const ClientSessionHistoryPage: React.FC = () => {
                     </Box>
                   </Box>
 
-                  {sess.status === "completed" && (
-                    <Box className="flex items-center gap-2">
-                      <Button
-                        variant="outlined"
-                        color="secondary"
+                  <Box className="flex items-center gap-2 flex-wrap">
+                    {(sess.status === "scheduled" ||
+                      sess.status === "ready" ||
+                      sess.status === "in_progress") && (
+                      <JoinMeetingButton
+                        sessionId={sess.id}
+                        sessionMode={sess.session_mode}
+                        meeting={sess.meeting}
                         size="small"
-                        startIcon={<FiStar />}
-                        onClick={() => setSelectedSessionForReview(sess)}
-                        className="rounded-xl normal-case font-semibold shrink-0"
-                      >
-                        {t("review:writeReview", "Review")}
-                      </Button>
-                      <Button
-                        variant="outlined"
-                        color="primary"
-                        size="small"
-                        startIcon={<FiFileText />}
-                        onClick={() => setSelectedSessionForNotes(sess)}
-                        className="rounded-xl normal-case font-semibold shrink-0"
-                      >
-                        {t("session:summaryNote")}
-                      </Button>
-                    </Box>
-                  )}
+                      />
+                    )}
+                    {sess.status === "completed" && (
+                      <>
+                        <Button
+                          variant="outlined"
+                          color="secondary"
+                          size="small"
+                          startIcon={<FiStar />}
+                          onClick={() => setSelectedSessionForReview(sess)}
+                          className="rounded-xl normal-case font-semibold shrink-0"
+                        >
+                          {t("review:writeReview", "Review")}
+                        </Button>
+                        <Button
+                          variant="outlined"
+                          color="primary"
+                          size="small"
+                          startIcon={<FiFileText />}
+                          onClick={() => setSelectedSessionForNotes(sess)}
+                          className="rounded-xl normal-case font-semibold shrink-0"
+                        >
+                          {t("session:summaryNote")}
+                        </Button>
+                      </>
+                    )}
+                  </Box>
                 </CardContent>
               </Card>
             );

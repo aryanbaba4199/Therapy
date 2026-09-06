@@ -150,6 +150,18 @@ export const sessionApi = baseApi.injectEndpoints({
       }),
       providesTags: ["Session"],
     }),
+
+    retryMeeting: builder.mutation<ApiResponse<SessionResponse>, string>({
+      query: (sessionId) => ({
+        url: `/sessions/${sessionId}/meeting/retry`,
+        method: "POST",
+      }),
+      invalidatesTags: (_result, _err, sessionId) => [
+        { type: "Session", id: sessionId },
+        "Session",
+        "TherapistDashboard",
+      ],
+    }),
   }),
 });
 
@@ -168,4 +180,5 @@ export const {
   useCreateGoalMutation,
   useUpdateGoalMutation,
   useListMySessionsQuery,
+  useRetryMeetingMutation,
 } = sessionApi;

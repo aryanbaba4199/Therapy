@@ -78,6 +78,14 @@ class Settings(BaseSettings):
         default=60, alias="SESSION_GRACE_PERIOD_MINUTES"
     )
 
+    # Google Calendar & Meet Settings
+    google_calendar_enabled: bool = Field(default=False, alias="GOOGLE_CALENDAR_ENABLED")
+    google_calendar_id: str = Field(default="primary", alias="GOOGLE_CALENDAR_ID")
+    google_service_account_email: str | None = Field(default=None, alias="GOOGLE_SERVICE_ACCOUNT_EMAIL")
+    google_service_account_private_key: str | None = Field(default=None, alias="GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY")
+    google_calendar_delegated_user: str | None = Field(default=None, alias="GOOGLE_CALENDAR_DELEGATED_USER")
+    google_calendar_timezone: str = Field(default="Asia/Kolkata", alias="GOOGLE_CALENDAR_TIMEZONE")
+
 
     # Cookie settings for Refresh Token
     refresh_cookie_name: str = Field(default="oppam_refresh_token", alias="REFRESH_COOKIE_NAME")

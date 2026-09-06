@@ -38,6 +38,7 @@ import {
   AttendanceChip,
   SessionStatusChip,
 } from "../components/SessionStatusChip";
+import { JoinMeetingButton } from "../components/JoinMeetingButton";
 import type { AttendanceStatus, SessionResponse } from "../types/session_types";
 
 export const TherapistDashboardPage: React.FC = () => {
@@ -123,8 +124,8 @@ export const TherapistDashboardPage: React.FC = () => {
     const isProfileMissing =
       (error as { status?: number; data?: { error?: { code?: string } } })
         ?.status === 403 ||
-      (error as { data?: { error?: { code?: string } } })?.data?.error
-        ?.code === "THERAPIST_NOT_FOUND";
+      (error as { data?: { error?: { code?: string } } })?.data?.error?.code ===
+        "THERAPIST_NOT_FOUND";
 
     return (
       <Container maxWidth="lg" className="py-12">
@@ -345,6 +346,17 @@ export const TherapistDashboardPage: React.FC = () => {
 
                     {/* Action Controls */}
                     <Box className="flex items-center gap-2 flex-wrap self-end md:self-auto">
+                      {(sess.status === "scheduled" ||
+                        sess.status === "ready" ||
+                        sess.status === "in_progress") && (
+                        <JoinMeetingButton
+                          sessionId={sess.id}
+                          sessionMode={sess.session_mode}
+                          meeting={sess.meeting}
+                          size="small"
+                        />
+                      )}
+
                       {(sess.status === "scheduled" ||
                         sess.status === "ready") && (
                         <Button

@@ -1,5 +1,6 @@
 """Domain business logic for Session lifecycle, attendance, notes, and goals."""
 
+import logging
 import uuid
 from datetime import UTC, datetime, timedelta
 
@@ -15,8 +16,25 @@ from app.common.exceptions.error_codes import ErrorCode
 from app.core.config import Settings
 from app.modules.booking.booking_model import BookingInDB
 from app.modules.booking.booking_repository import BookingRepository
-from app.modules.session.session_constants import AttendanceStatus, GoalStatus, SessionStatus
-from app.modules.session.session_model import SessionInDB, SessionNoteInDB, TherapyGoalInDB
+from app.modules.session.providers.google_meet_provider import GoogleMeetProvider
+from app.modules.session.providers.meeting_provider import (
+    MeetingAttendee,
+    MeetingCreationRequest,
+    MeetingProvider,
+)
+from app.modules.session.providers.mock_meeting_provider import MockMeetingProvider
+from app.modules.session.session_constants import (
+    AttendanceStatus,
+    GoalStatus,
+    MeetingStatus,
+    SessionStatus,
+)
+from app.modules.session.session_model import (
+    SessionInDB,
+    SessionMeetingInDB,
+    SessionNoteInDB,
+    TherapyGoalInDB,
+)
 from app.modules.session.session_repository import SessionRepository
 from app.modules.session.session_schema import (
     ClientSessionNoteResponse,
@@ -34,6 +52,8 @@ from app.modules.therapist.therapist_repository import TherapistRepository
 from app.modules.user.user_constants import UserRole
 from app.modules.user.user_model import UserInDB
 
+logger = logging.getLogger(__name__)
+
 
 class SessionService:
     """Core domain orchestrator for confirmed session runtimes."""
@@ -44,11 +64,23 @@ class SessionService:
         booking_repo: BookingRepository,
         therapist_repo: TherapistRepository,
         settings: Settings,
+        meeting_provider: MeetingProvider | None = None,
     ) -> None:
         self.session_repo = session_repo
         self.booking_repo = booking_repo
         self.therapist_repo = therapist_repo
         self.settings = settings
+        if meeting_provider is not None:
+            self.meeting_provider = meeting_provider
+        elif settings.google_calendar_enabled:
+            self.meeting_provider = GoogleMeetProvider(
+                service_account_email=settings.google_service_account_email,
+                private_key=settings.google_service_account_private_key,
+                calendar_id=settings.google_calendar_id,
+                delegated_user=settings.google_calendar_delegated_user,
+            )
+        else:
+            self.meeting_provider = MockMeetingProvider()
 
     async def _get_caller_therapist_id(self, caller: UserInDB) -> str | None:
         """Resolve therapist profile ID for authenticated caller if therapist role."""
@@ -66,6 +98,23 @@ class SessionService:
         if existing:
             return existing
 
+        is_online = (
+            booking.session_mode.value == "online"
+            if hasattr(booking.session_mode, "value")
+            else str(booking.session_mode) == "online"
+        )
+        initial_meeting = (
+            SessionMeetingInDB(
+                provider=self.meeting_provider.name,
+                status=MeetingStatus.NOT_STARTED,
+            )
+            if is_online
+            else SessionMeetingInDB(
+                provider=self.meeting_provider.name,
+                status=MeetingStatus.NOT_REQUIRED,
+            )
+        )
+
         session = SessionInDB(
             id=str(uuid.uuid4()),
             booking_id=booking.id,
@@ -77,14 +126,151 @@ class SessionService:
             session_mode=booking.session_mode.value if hasattr(booking.session_mode, "value") else str(booking.session_mode),
             status=SessionStatus.SCHEDULED,
             attendance=AttendanceStatus.UNKNOWN,
+            meeting=initial_meeting,
         )
         try:
-            return await self.session_repo.create_session(session)
+            created = await self.session_repo.create_session(session)
         except DuplicateKeyError:
             existing_after_race = await self.session_repo.get_session_by_booking_id(booking.id)
             if existing_after_race:
                 return existing_after_race
             raise
+
+        if is_online:
+            try:
+                await self.provision_meeting(created.id)
+                refreshed = await self.session_repo.get_session_by_id(created.id)
+                if refreshed:
+                    return refreshed
+            except Exception as exc:
+                # Meeting provisioning failure must NEVER roll back confirmed booking or session creation.
+                logger.error("Initial meeting provisioning failed for session %s: %s", created.id, exc)
+
+        return created
+
+    async def provision_meeting(self, session_id: str) -> SessionInDB:
+        """Atomically claim provisioning lock and create conference via MeetingProvider."""
+        session = await self.session_repo.get_session_by_id(session_id)
+        if not session:
+            raise NotFoundException(message="Session not found", code=ErrorCode.SESSION_NOT_FOUND)
+
+        if session.session_mode != "online":
+            return session
+
+        # If already ready with join_url, return immediately
+        if session.meeting and session.meeting.status == MeetingStatus.READY and session.meeting.join_url:
+            return session
+
+        worker_id = str(uuid.uuid4())
+        claimed = await self.session_repo.claim_meeting_provisioning(session_id, worker_id=worker_id)
+        if not claimed:
+            # Another worker has claimed or session is already being provisioned
+            fresh = await self.session_repo.get_session_by_id(session_id)
+            return fresh or session
+
+        try:
+            # 1. Resolve Therapist details
+            therapist = await self.therapist_repo.get_by_id(session.therapist_id)
+            therapist_name = therapist.display_name if therapist else "Therapist"
+            therapist_email = f"therapist_{session.therapist_id}@oppamtherapy.com"
+            if therapist and therapist.user_id:
+                th_user = await self.session_repo.db["users"].find_one({"id": therapist.user_id})
+                if th_user and th_user.get("email"):
+                    therapist_email = th_user["email"]
+
+            # 2. Resolve Client details
+            client_user = await self.session_repo.db["users"].find_one({"id": session.client_id})
+            client_name = "Client"
+            client_email = f"client_{session.client_id}@oppamtherapy.com"
+            if client_user:
+                full_name = f"{client_user.get('first_name', '')} {client_user.get('last_name', '')}".strip()
+                if full_name:
+                    client_name = full_name
+                if client_user.get("email"):
+                    client_email = client_user["email"]
+
+            attendees = [
+                MeetingAttendee(name=therapist_name, email=therapist_email, role="therapist"),
+                MeetingAttendee(name=client_name, email=client_email, role="client"),
+            ]
+
+            req = MeetingCreationRequest(
+                session_id=session.id,
+                title=f"Therapy Session — {therapist_name}",
+                start_at=session.scheduled_start_at,
+                end_at=session.scheduled_end_at,
+                timezone=self.settings.google_calendar_timezone,
+                attendees=attendees,
+            )
+
+            result = await self.meeting_provider.create_meeting(req)
+
+            meeting_db = SessionMeetingInDB(
+                provider=self.meeting_provider.name,
+                status=result.status,
+                join_url=result.join_url,
+                provider_event_id=result.provider_event_id,
+                conference_id=result.conference_id,
+                error_message=result.error_message,
+                claimed_by=None,
+                claimed_at=None,
+            )
+            updated = await self.session_repo.update_session_meeting(session.id, meeting_db)
+            return updated or session
+
+        except Exception as exc:
+            logger.exception("Failed to provision meeting for session %s: %s", session_id, exc)
+            meeting_failed = SessionMeetingInDB(
+                provider=self.meeting_provider.name,
+                status=MeetingStatus.FAILED,
+                error_message=str(exc),
+                claimed_by=None,
+                claimed_at=None,
+            )
+            updated = await self.session_repo.update_session_meeting(session.id, meeting_failed)
+            return updated or session
+
+    async def retry_meeting_provisioning(
+        self, session_id: str, caller: UserInDB
+    ) -> SessionResponse:
+        """Allow assigned therapist, client, or admin to retry failed meeting provisioning."""
+        session = await self.session_repo.get_session_by_id(session_id)
+        if not session:
+            raise NotFoundException(message="Session not found", code=ErrorCode.SESSION_NOT_FOUND)
+
+        caller_th_id = await self._get_caller_therapist_id(caller)
+        is_staff = any(
+            r in caller.roles
+            for r in [UserRole.ADMIN, UserRole.SUPER_ADMIN, UserRole.STAFF]
+        )
+        is_therapist_owner = caller_th_id == session.therapist_id
+        is_client_owner = caller.id == session.client_id
+
+        if not is_therapist_owner and not is_client_owner and not is_staff:
+            raise ForbiddenException(
+                message="Not authorized to retry meeting for this session",
+                code=ErrorCode.FORBIDDEN,
+            )
+
+        if session.session_mode != "online":
+            raise BadRequestException(
+                message="Meeting provisioning is only supported for online sessions",
+                code=ErrorCode.SESSION_INVALID_STATE,
+            )
+
+        # Force state to failed if stuck in processing so lock claim succeeds
+        if session.meeting and session.meeting.status == MeetingStatus.PROCESSING:
+            await self.session_repo.update_session_meeting(
+                session.id,
+                SessionMeetingInDB(
+                    provider=self.meeting_provider.name,
+                    status=MeetingStatus.FAILED,
+                    error_message="Manual retry initiated",
+                ),
+            )
+
+        updated_session = await self.provision_meeting(session.id)
+        return SessionResponse.from_db(updated_session)
 
     async def get_session(self, session_id: str, caller: UserInDB) -> SessionResponse:
         """Fetch session detail with strict role & ownership checking."""

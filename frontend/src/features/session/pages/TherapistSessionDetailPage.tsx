@@ -51,6 +51,7 @@ import {
   AttendanceChip,
   SessionStatusChip,
 } from "../components/SessionStatusChip";
+import { JoinMeetingButton } from "../components/JoinMeetingButton";
 import type { AttendanceStatus, GoalStatus } from "../types/session_types";
 
 export const TherapistSessionDetailPage: React.FC = () => {
@@ -331,6 +332,17 @@ export const TherapistSessionDetailPage: React.FC = () => {
 
             {/* Action Buttons */}
             <Box className="flex items-center gap-2 flex-wrap">
+              {(session.status === "scheduled" ||
+                session.status === "ready" ||
+                session.status === "in_progress") && (
+                <JoinMeetingButton
+                  sessionId={session.id}
+                  sessionMode={session.session_mode}
+                  meeting={session.meeting}
+                  size="medium"
+                />
+              )}
+
               {(session.status === "scheduled" ||
                 session.status === "ready") && (
                 <Button

@@ -5,6 +5,15 @@ export type AttendanceStatus = "unknown" | "present" | "absent" | "late";
 
 export type GoalStatus = "active" | "completed" | "archived";
 
+export type MeetingStatus =
+  "not_required" | "not_started" | "processing" | "ready" | "failed";
+
+export interface SessionMeetingResponse {
+  provider: string;
+  status: MeetingStatus;
+  join_url: string | null;
+}
+
 export interface SessionResponse {
   id: string;
   booking_id: string;
@@ -18,6 +27,7 @@ export interface SessionResponse {
   started_at: string | null;
   ended_at: string | null;
   attendance: AttendanceStatus;
+  meeting?: SessionMeetingResponse | null;
   created_at: string;
   updated_at: string;
 }
@@ -33,6 +43,7 @@ export interface ClientSessionResponse {
   status: SessionStatus;
   started_at: string | null;
   ended_at: string | null;
+  meeting?: SessionMeetingResponse | null;
 }
 
 export interface RecordAttendanceRequest {

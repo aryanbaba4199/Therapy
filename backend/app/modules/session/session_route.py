@@ -103,6 +103,19 @@ async def record_attendance(
     return await controller.record_attendance(caller=caller, session_id=session_id, req=req)
 
 
+@router.post(
+    "/{session_id}/meeting/retry",
+    response_model=ApiResponse[SessionResponse],
+    summary="Retry Google Meet conference provisioning (Therapist/Client/Admin)",
+)
+async def retry_meeting(
+    session_id: str,
+    caller: Annotated[UserInDB, Depends(get_current_active_user)],
+    controller: Annotated[SessionController, Depends(get_session_controller)],
+) -> ApiResponse[SessionResponse]:
+    return await controller.retry_meeting(caller=caller, session_id=session_id)
+
+
 # --- Clinical Notes Operations ---
 
 @router.get(

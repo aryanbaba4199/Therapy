@@ -29,3 +29,21 @@ class GoalStatus(StrEnum):
     ACTIVE = "active"
     COMPLETED = "completed"
     ARCHIVED = "archived"
+
+
+class MeetingStatus(StrEnum):
+    """Status for session video conference meeting provisioning."""
+
+    NOT_REQUIRED = "not_required"
+    NOT_STARTED = "not_started"
+    PROCESSING = "processing"
+    READY = "ready"
+    FAILED = "failed"
+
+
+class MeetingProviderType(StrEnum):
+    """Supported meeting provider backends."""
+
+    GOOGLE_MEET = "google_meet"
+    MOCK = "mock"
+

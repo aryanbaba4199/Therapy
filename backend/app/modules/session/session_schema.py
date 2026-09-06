@@ -4,8 +4,38 @@ from datetime import datetime
 
 from pydantic import BaseModel, Field
 
-from app.modules.session.session_constants import AttendanceStatus, GoalStatus, SessionStatus
-from app.modules.session.session_model import SessionInDB, SessionNoteInDB, TherapyGoalInDB
+from app.modules.session.session_constants import (
+    AttendanceStatus,
+    GoalStatus,
+    MeetingProviderType,
+    MeetingStatus,
+    SessionStatus,
+)
+from app.modules.session.session_model import (
+    SessionInDB,
+    SessionMeetingInDB,
+    SessionNoteInDB,
+    TherapyGoalInDB,
+)
+
+
+class SessionMeetingResponse(BaseModel):
+    """Sanitized meeting details exposed to authorized therapists, clients, and operations."""
+
+    provider: MeetingProviderType
+    status: MeetingStatus
+    join_url: str | None = None
+
+    @classmethod
+    def from_db(cls, doc: SessionMeetingInDB | None) -> "SessionMeetingResponse | None":
+        if not doc:
+            return None
+        return cls(
+            provider=doc.provider,
+            status=doc.status,
+            join_url=doc.join_url,
+        )
+
 
 # --- Session Schemas ---
 
@@ -24,6 +54,7 @@ class SessionResponse(BaseModel):
     started_at: datetime | None = None
     ended_at: datetime | None = None
     attendance: AttendanceStatus
+    meeting: SessionMeetingResponse | None = None
     created_at: datetime
     updated_at: datetime
 
@@ -42,6 +73,7 @@ class SessionResponse(BaseModel):
             started_at=doc.started_at,
             ended_at=doc.ended_at,
             attendance=doc.attendance,
+            meeting=SessionMeetingResponse.from_db(doc.meeting),
             created_at=doc.created_at,
             updated_at=doc.updated_at,
         )
@@ -60,6 +92,7 @@ class ClientSessionResponse(BaseModel):
     status: SessionStatus
     started_at: datetime | None = None
     ended_at: datetime | None = None
+    meeting: SessionMeetingResponse | None = None
 
     @classmethod
     def from_db(cls, doc: SessionInDB) -> "ClientSessionResponse":
@@ -74,7 +107,9 @@ class ClientSessionResponse(BaseModel):
             status=doc.status,
             started_at=doc.started_at,
             ended_at=doc.ended_at,
+            meeting=SessionMeetingResponse.from_db(doc.meeting),
         )
+
 
 
 class RecordAttendanceRequest(BaseModel):

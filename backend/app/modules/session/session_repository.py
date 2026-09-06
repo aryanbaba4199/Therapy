@@ -1,13 +1,23 @@
 """Repository layer for Sessions, Clinical Notes, and Therapy Goals in MongoDB."""
 
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from typing import Any
 
 from motor.motor_asyncio import AsyncIOMotorDatabase
 from pymongo import ASCENDING, IndexModel
 
-from app.modules.session.session_constants import AttendanceStatus, GoalStatus, SessionStatus
-from app.modules.session.session_model import SessionInDB, SessionNoteInDB, TherapyGoalInDB
+from app.modules.session.session_constants import (
+    AttendanceStatus,
+    GoalStatus,
+    MeetingStatus,
+    SessionStatus,
+)
+from app.modules.session.session_model import (
+    SessionInDB,
+    SessionMeetingInDB,
+    SessionNoteInDB,
+    TherapyGoalInDB,
+)
 
 
 class SessionRepository:
@@ -30,6 +40,8 @@ class SessionRepository:
             IndexModel([("client_id", ASCENDING), ("scheduled_start_at", ASCENDING)], name="idx_sessions_client_time"),
             # Status filters
             IndexModel([("status", ASCENDING), ("scheduled_start_at", ASCENDING)], name="idx_sessions_status_time"),
+            # Meeting provisioning status
+            IndexModel([("meeting.status", ASCENDING)], name="idx_sessions_meeting_status"),
         ]
         await self.sessions.create_indexes(session_indexes)
 
@@ -114,6 +126,58 @@ class SessionRepository:
         doc = await self.sessions.find_one_and_update(
             query,
             {"$set": {"status": SessionStatus.CANCELLED.value, "updated_at": now}},
+            return_document=True,
+        )
+        return SessionInDB(**doc) if doc else None
+
+    async def claim_meeting_provisioning(
+        self, session_id: str, worker_id: str, timeout_seconds: int = 60
+    ) -> bool:
+        """Atomically claim meeting provisioning lock if not started, failed, or timed out."""
+        now = datetime.now(UTC)
+        timeout_threshold = now - timedelta(seconds=timeout_seconds)
+
+        query = {
+            "id": session_id,
+            "session_mode": "online",
+            "$or": [
+                {"meeting": None},
+                {
+                    "meeting.status": {
+                        "$in": [MeetingStatus.NOT_STARTED.value, MeetingStatus.FAILED.value]
+                    }
+                },
+                {
+                    "meeting.status": MeetingStatus.PROCESSING.value,
+                    "meeting.claimed_at": {"$lt": timeout_threshold},
+                },
+            ],
+        }
+        update = {
+            "$set": {
+                "meeting.status": MeetingStatus.PROCESSING.value,
+                "meeting.claimed_by": worker_id,
+                "meeting.claimed_at": now,
+                "meeting.updated_at": now,
+                "updated_at": now,
+            }
+        }
+        res = await self.sessions.find_one_and_update(query, update, return_document=False)
+        return res is not None
+
+    async def update_session_meeting(
+        self, session_id: str, meeting: SessionMeetingInDB
+    ) -> SessionInDB | None:
+        """Persist updated meeting state (join_url, event_id, status) onto session."""
+        now = datetime.now(UTC)
+        doc = await self.sessions.find_one_and_update(
+            {"id": session_id},
+            {
+                "$set": {
+                    "meeting": meeting.model_dump(),
+                    "updated_at": now,
+                }
+            },
             return_document=True,
         )
         return SessionInDB(**doc) if doc else None
