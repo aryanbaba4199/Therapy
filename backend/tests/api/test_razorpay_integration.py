@@ -120,7 +120,13 @@ async def test_razorpay_webhook_event_deduplication(
         "amount_minor": 150000,
     }
     body_bytes = json.dumps(webhook_body).encode("utf-8")
-    secret = "mock_webhook_secret_key_therapy_2026"
+    from app.core.config import get_settings
+    settings = get_settings()
+    secret = (
+        settings.razorpay_webhook_secret
+        if settings.payment_provider == "razorpay" and settings.razorpay_webhook_secret
+        else settings.payment_webhook_secret
+    )
     sig = generate_hmac_sha256(secret, body_bytes)
 
     # First delivery

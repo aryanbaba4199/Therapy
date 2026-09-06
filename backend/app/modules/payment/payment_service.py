@@ -323,15 +323,15 @@ class PaymentService:
         provider_payment_id = ""
         event_id = ""
 
-        if self.provider.name == PaymentProviderName.RAZORPAY or "contains" in data:
+        if self.provider.name == PaymentProviderName.RAZORPAY or "contains" in data or "payload" in data:
             # Razorpay standard webhook structure
             event_type = data.get("event", "")
             payload_entity = data.get("payload", {})
             payment_entity = payload_entity.get("payment", {}).get("entity", {})
             order_entity = payload_entity.get("order", {}).get("entity", {})
-            provider_order_id = payment_entity.get("order_id") or order_entity.get("id") or ""
-            provider_payment_id = payment_entity.get("id") or ""
-            event_id = data.get("id") or f"evt_rzp_{provider_payment_id or uuid.uuid4().hex[:12]}"
+            provider_order_id = payment_entity.get("order_id") or order_entity.get("id") or data.get("provider_order_id") or ""
+            provider_payment_id = payment_entity.get("id") or data.get("provider_payment_id") or ""
+            event_id = data.get("id") or data.get("event_id") or f"evt_rzp_{provider_payment_id or uuid.uuid4().hex[:12]}"
         else:
             # Mock or simplified format
             event_type = data.get("event", "")

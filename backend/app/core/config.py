@@ -69,6 +69,10 @@ class Settings(BaseSettings):
     razorpay_account_mode: Literal["test", "live"] = Field(
         default="test", alias="RAZORPAY_ACCOUNT_MODE"
     )
+    rzr_dev_key: str = Field(default="", alias="RZR_DEV_KEY")
+    rzr_dev_secret: str = Field(default="", alias="RZR_DEV_SECRET")
+    rzr_prod_key: str = Field(default="", alias="RZR_PROD_KEY")
+    rzr_prod_secret: str = Field(default="", alias="RZR_PROD_SECRET")
 
     # Session & Operational Runtime settings
     session_start_window_minutes: int = Field(
@@ -110,7 +114,26 @@ class Settings(BaseSettings):
 
     @model_validator(mode="after")
     def validate_production_settings(self) -> "Settings":
-        """Fail-closed on insecure configuration in production."""
+        """Resolve aliases and fail-closed on insecure configuration in production."""
+        # Resolve Razorpay credentials from RZR_DEV_* or RZR_PROD_* aliases if not set
+        if not self.razorpay_key_id:
+            if self.razorpay_account_mode == "test" and self.rzr_dev_key:
+                self.razorpay_key_id = self.rzr_dev_key
+            elif self.razorpay_account_mode == "live" and self.rzr_prod_key:
+                self.razorpay_key_id = self.rzr_prod_key
+
+        if not self.razorpay_key_secret:
+            if self.razorpay_account_mode == "test" and self.rzr_dev_secret:
+                self.razorpay_key_secret = self.rzr_dev_secret
+            elif self.razorpay_account_mode == "live" and self.rzr_prod_secret:
+                self.razorpay_key_secret = self.rzr_prod_secret
+
+        if not self.razorpay_webhook_secret:
+            if self.razorpay_account_mode == "test" and self.rzr_dev_secret:
+                self.razorpay_webhook_secret = self.rzr_dev_secret
+            elif self.razorpay_account_mode == "live" and self.rzr_prod_secret:
+                self.razorpay_webhook_secret = self.rzr_prod_secret
+
         if self.app_env == "production":
             default_secret = "replace-this-in-production-with-a-secure-secret-key-min-32-chars"
             if self.jwt_secret_key == default_secret or len(self.jwt_secret_key) < 32:

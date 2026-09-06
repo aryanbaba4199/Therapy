@@ -6,6 +6,7 @@ import os
 os.environ["APP_ENV"] = "test"
 os.environ["DEBUG"] = "true"
 os.environ["MONGODB_DATABASE"] = "oppam_therapy_test"
+os.environ["PAYMENT_PROVIDER"] = "mock"
 
 from collections.abc import AsyncIterator  # noqa: E402
 from typing import Any
