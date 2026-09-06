@@ -5,8 +5,17 @@ from typing import Any
 
 from pydantic import BaseModel, Field
 
+from app.modules.availability.availability_constants import DEFAULT_TIMEZONE
+from app.modules.availability.availability_schema import DayScheduleSchema
 from app.modules.operations.operations_constants import AuditAction, LeadSource, LeadStatus
 from app.modules.operations.operations_model import AuditLogInDB, LeadInDB
+from app.modules.therapist.therapist_constants import (
+    SessionMode,
+    TherapistSpecialization,
+    TherapistStatus,
+    TherapistVerificationStatus,
+)
+from app.modules.therapist.therapist_schema import TherapistDetailResponse
 from app.modules.user.user_constants import UserRole, UserStatus
 from app.modules.user.user_model import UserInDB
 
@@ -163,3 +172,87 @@ class OperationUserDetailResponse(BaseModel):
             updated_at=user.updated_at,
             last_login_at=user.last_login_at,
         )
+
+
+# --- Super Admin -> Therapist Onboarding Schemas ---
+
+class OnboardTherapistAccountRequest(BaseModel):
+    """Account credentials and personal information for new therapist."""
+
+    first_name: str = Field(min_length=1, max_length=50)
+    last_name: str = Field(min_length=1, max_length=50)
+    email: str = Field(min_length=5, max_length=255)
+    phone: str = Field(min_length=8, max_length=20)
+    temporary_password: str | None = Field(
+        default=None,
+        min_length=8,
+        max_length=128,
+        description="Optional initial password. If omitted, backend generates a secure password.",
+    )
+
+
+class OnboardTherapistProfileRequest(BaseModel):
+    """Professional clinical background and public persona."""
+
+    display_name: str | None = Field(default=None, max_length=100)
+    bio: str = Field(min_length=10, max_length=5000)
+    designation: str = Field(min_length=2, max_length=100)
+    specialization: TherapistSpecialization
+    qualifications: list[str] = Field(min_length=1)
+    experience_years: int = Field(ge=0, le=70)
+    therapy_hours: int = Field(default=0, ge=0)
+    languages: list[str] = Field(min_length=1)
+    expertises: list[str] = Field(min_length=1)
+    session_modes: list[SessionMode] = Field(min_length=1)
+    profile_image_url: str | None = None
+    introduction_audio_url: str | None = None
+
+
+class OnboardTherapistPricingRequest(BaseModel):
+    """Session duration and consultation charges."""
+
+    amount: float = Field(ge=0)
+    currency: str = Field(default="INR", max_length=3)
+    duration_minutes: int = Field(default=60, ge=15, le=180)
+
+
+class OnboardTherapistVerificationRequest(BaseModel):
+    """License registration details and initial verification status."""
+
+    status: TherapistVerificationStatus = TherapistVerificationStatus.PENDING
+    registration_number: str | None = None
+    registration_authority: str | None = None
+    rejection_reason: str | None = None
+
+
+class OnboardTherapistAvailabilityRequest(BaseModel):
+    """Optional initial recurring weekly availability schedule."""
+
+    timezone: str = Field(default=DEFAULT_TIMEZONE)
+    days: list[DayScheduleSchema] = Field(default_factory=list)
+
+
+class OnboardTherapistRequest(BaseModel):
+    """Consolidated payload for Super Admin Therapist Onboarding."""
+
+    account: OnboardTherapistAccountRequest
+    profile: OnboardTherapistProfileRequest
+    pricing: OnboardTherapistPricingRequest
+    verification: OnboardTherapistVerificationRequest = Field(
+        default_factory=OnboardTherapistVerificationRequest
+    )
+    availability: OnboardTherapistAvailabilityRequest | None = None
+    status: TherapistStatus = TherapistStatus.DRAFT
+
+
+class OnboardTherapistResponse(BaseModel):
+    """Result of therapist onboarding including generated credentials for Super Admin."""
+
+    therapist: TherapistDetailResponse
+    user_id: str
+    email: str
+    phone: str
+    temporary_password: str | None = None
+    status: TherapistStatus
+    verification_status: TherapistVerificationStatus
+    schedule_configured: bool = False

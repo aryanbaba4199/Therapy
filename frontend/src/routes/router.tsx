@@ -29,6 +29,7 @@ import {
   FirstResponderDashboardPage,
   LeadManagementPage,
   PaymentOperationsPage,
+  TherapistOnboardingPage,
   TherapistOperationsPage,
   UserManagementPage,
 } from "../features/operations";
@@ -163,6 +164,14 @@ export const router = createBrowserRouter([
               {
                 path: "operations/therapists",
                 element: <TherapistOperationsPage />,
+              },
+              {
+                path: "operations/therapists/new",
+                element: <TherapistOnboardingPage />,
+              },
+              {
+                path: "admin/therapists/new",
+                element: <TherapistOnboardingPage />,
               },
               {
                 path: "operations/bookings",

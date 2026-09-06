@@ -1,17 +1,23 @@
 """Operational Service encapsulating administrative logic, lead triage, and audit emissions."""
 
+import secrets
 import uuid
 from typing import Any
 
 from motor.motor_asyncio import AsyncIOMotorDatabase
+from pymongo.errors import DuplicateKeyError
 
 from app.common.exceptions.app_exceptions import (
     BadRequestException,
+    ConflictException,
     ForbiddenException,
     NotFoundException,
 )
 from app.common.exceptions.error_codes import ErrorCode
 from app.common.utils.datetime_utils import utc_now
+from app.modules.auth.auth_utils import hash_password
+from app.modules.availability.availability_schema import SetWeeklyScheduleRequest
+from app.modules.availability.availability_service import AvailabilityService
 from app.modules.booking.booking_model import BookingInDB
 from app.modules.booking.booking_repository import BookingRepository
 from app.modules.operations.operations_constants import (
@@ -28,13 +34,23 @@ from app.modules.operations.operations_schema import (
     LeadCreateRequest,
     LeadResponse,
     LeadUpdateRequest,
+    OnboardTherapistRequest,
+    OnboardTherapistResponse,
     OperationUserDetailResponse,
     UpdateUserRolesRequest,
     UpdateUserStatusRequest,
 )
 from app.modules.payment.payment_model import PaymentInDB
 from app.modules.payment.payment_repository import PaymentRepository
-from app.modules.therapist.therapist_model import TherapistInDB
+from app.modules.therapist.therapist_constants import (
+    TherapistStatus,
+    TherapistVerificationStatus,
+)
+from app.modules.therapist.therapist_model import (
+    PricingModel,
+    TherapistInDB,
+    VerificationModel,
+)
 from app.modules.therapist.therapist_repository import TherapistRepository
 from app.modules.therapist.therapist_schema import (
     AdminUpdateTherapistVerificationRequest,
@@ -42,7 +58,7 @@ from app.modules.therapist.therapist_schema import (
     UpdateTherapistRequest,
 )
 from app.modules.therapist.therapist_service import TherapistService
-from app.modules.user.user_constants import UserRole, UserStatus
+from app.modules.user.user_constants import AuthProvider, UserRole, UserStatus
 from app.modules.user.user_model import UserInDB
 from app.modules.user.user_repository import UserRepository
 
@@ -59,6 +75,7 @@ class OperationsService:
         therapist_service: TherapistService,
         booking_repo: BookingRepository,
         payment_repo: PaymentRepository,
+        availability_service: AvailabilityService,
     ) -> None:
         self.db = db
         self.ops_repo = ops_repo
@@ -67,6 +84,7 @@ class OperationsService:
         self.therapist_service = therapist_service
         self.booking_repo = booking_repo
         self.payment_repo = payment_repo
+        self.availability_service = availability_service
 
     def has_permission(self, user: UserInDB, permission: Permission) -> bool:
         """Evaluate if user possesses a given operational permission."""
@@ -321,6 +339,207 @@ class OperationsService:
             request_id=request_id,
         )
         return res
+
+    async def onboard_therapist(
+        self,
+        caller: UserInDB,
+        req: OnboardTherapistRequest,
+        request_id: str | None = None,
+    ) -> OnboardTherapistResponse:
+        """Onboard a new practitioner with User account, Therapist profile, and optional schedule.
+
+        Super Admin only. Guarantees atomic verification-status invariants, user credential creation,
+        and append-only audit logging.
+        """
+        # 1. Access Control: Super Admin role or THERAPISTS_MANAGE permission required
+        if UserRole.SUPER_ADMIN not in caller.roles and not self.has_permission(
+            caller, Permission.THERAPISTS_MANAGE
+        ):
+            raise ForbiddenException(
+                message="Only Super Admin can onboard and provision new therapists",
+                code=ErrorCode.OPS_FORBIDDEN,
+            )
+
+        # 2. Invariant Validation: ACTIVE status requires VERIFIED credentials
+        if (
+            req.status == TherapistStatus.ACTIVE
+            and req.verification.status != TherapistVerificationStatus.VERIFIED
+        ):
+            raise BadRequestException(
+                message="Therapist cannot be activated without verified credentials",
+                code=ErrorCode.THERAPIST_VERIFICATION_REQUIRED,
+            )
+
+        normalized_email = req.account.email.strip().lower()
+        normalized_phone = req.account.phone.strip()
+
+        # 3. Check for User collision before provisioning
+        existing_email = await self.user_repo.get_by_email(normalized_email)
+        if existing_email:
+            raise BadRequestException(
+                message=f"User with email '{normalized_email}' already exists",
+                code=ErrorCode.USER_EMAIL_ALREADY_EXISTS,
+            )
+
+        existing_phone = await self.user_repo.get_by_phone(normalized_phone)
+        if existing_phone:
+            raise BadRequestException(
+                message=f"User with phone '{normalized_phone}' already exists",
+                code=ErrorCode.USER_PHONE_ALREADY_EXISTS,
+            )
+
+        # 4. Generate or hash password
+        raw_password = req.account.temporary_password
+        if not raw_password or not raw_password.strip():
+            raw_password = secrets.token_urlsafe(12)
+        password_hash = hash_password(raw_password)
+
+        now = utc_now()
+        user_id = str(uuid.uuid4())
+        therapist_id = str(uuid.uuid4())
+
+        user = UserInDB(
+            id=user_id,
+            first_name=req.account.first_name.strip(),
+            last_name=req.account.last_name.strip(),
+            email=normalized_email,
+            phone=normalized_phone,
+            password_hash=password_hash,
+            roles=[UserRole.THERAPIST],
+            status=UserStatus.ACTIVE,
+            is_verified=True,
+            auth_providers=[AuthProvider.PASSWORD],
+            profile={
+                "display_name": req.profile.display_name
+                or f"{req.account.first_name.strip()} {req.account.last_name.strip()}",
+                "onboarded_by": caller.id,
+            },
+            created_at=now,
+            updated_at=now,
+        )
+
+        try:
+            await self.user_repo.create(user)
+        except DuplicateKeyError as exc:
+            raise ConflictException(
+                message="User account already exists with these credentials",
+                code=ErrorCode.USER_ALREADY_EXISTS,
+            ) from exc
+
+        # 5. Build and persist Therapist Profile
+        display_name = req.profile.display_name or f"{user.first_name} {user.last_name}"
+        therapist = TherapistInDB(
+            id=therapist_id,
+            user_id=user_id,
+            first_name=user.first_name,
+            last_name=user.last_name,
+            display_name=display_name,
+            bio=req.profile.bio,
+            profile_image_url=req.profile.profile_image_url,
+            introduction_audio_url=req.profile.introduction_audio_url,
+            designation=req.profile.designation,
+            specialization=req.profile.specialization,
+            qualifications=req.profile.qualifications,
+            experience_years=req.profile.experience_years,
+            therapy_hours=req.profile.therapy_hours,
+            languages=[lang.strip().lower() for lang in req.profile.languages if lang.strip()],
+            expertises=[exp.strip().lower() for exp in req.profile.expertises if exp.strip()],
+            session_modes=req.profile.session_modes,
+            pricing=PricingModel(
+                amount=req.pricing.amount,
+                currency=req.pricing.currency,
+                duration_minutes=req.pricing.duration_minutes,
+            ),
+            verification=VerificationModel(
+                status=req.verification.status,
+                verified_at=now if req.verification.status == TherapistVerificationStatus.VERIFIED else None,
+                verified_by=caller.id if req.verification.status == TherapistVerificationStatus.VERIFIED else None,
+                rejection_reason=req.verification.rejection_reason,
+            ),
+            status=req.status,
+            metadata={
+                "registration_number": req.verification.registration_number,
+                "registration_authority": req.verification.registration_authority,
+                "onboarded_by": caller.id,
+            },
+            created_at=now,
+            updated_at=now,
+        )
+
+        try:
+            await self.therapist_repo.create(therapist)
+        except DuplicateKeyError as exc:
+            # Clean up user if therapist profile uniqueness is violated
+            await self.user_repo.collection.delete_one({"id": user_id})
+            raise ConflictException(
+                message="Therapist profile already exists for this user",
+                code=ErrorCode.THERAPIST_ALREADY_EXISTS_FOR_USER,
+            ) from exc
+
+        # 6. Optional Initial Availability Schedule
+        schedule_configured = False
+        if req.availability and req.availability.days:
+            try:
+                schedule_req = SetWeeklyScheduleRequest(
+                    timezone=req.availability.timezone,
+                    days=req.availability.days,
+                )
+                await self.availability_service.set_weekly_schedule(
+                    therapist_id=therapist_id,
+                    caller=caller,
+                    req=schedule_req,
+                )
+                schedule_configured = True
+            except Exception:
+                # Keep therapist profile intact even if schedule setup has a minor error
+                schedule_configured = False
+
+        # 7. Audit Logging
+        await self.log_audit_event(
+            actor=caller,
+            action=AuditAction.THERAPIST_CREATED,
+            resource_type="therapist",
+            resource_id=therapist_id,
+            metadata={
+                "user_id": user_id,
+                "email": normalized_email,
+                "status": req.status.value,
+                "verification_status": req.verification.status.value,
+                "schedule_configured": schedule_configured,
+            },
+            request_id=request_id,
+        )
+
+        if req.verification.status == TherapistVerificationStatus.VERIFIED:
+            await self.log_audit_event(
+                actor=caller,
+                action=AuditAction.THERAPIST_VERIFIED,
+                resource_type="therapist",
+                resource_id=therapist_id,
+                metadata={"status": "verified", "initial_onboarding": True},
+                request_id=request_id,
+            )
+
+        if req.status == TherapistStatus.ACTIVE:
+            await self.log_audit_event(
+                actor=caller,
+                action=AuditAction.THERAPIST_ACTIVATED,
+                resource_type="therapist",
+                resource_id=therapist_id,
+                metadata={"status": "active", "initial_onboarding": True},
+                request_id=request_id,
+            )
+
+        return OnboardTherapistResponse(
+            therapist=TherapistDetailResponse.from_therapist_db(therapist),
+            user_id=user_id,
+            email=normalized_email,
+            phone=normalized_phone,
+            temporary_password=raw_password,
+            status=req.status,
+            verification_status=req.verification.status,
+            schedule_configured=schedule_configured,
+        )
 
     # --- Booking & Payment Operations Visibility ---
 

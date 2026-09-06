@@ -8,6 +8,8 @@ import type {
   CreateLeadRequest,
   Lead,
   LeadStatus,
+  OnboardTherapistRequest,
+  OnboardTherapistResponse,
   OperationUserDetail,
   PaymentOperationalView,
   UpdateLeadRequest,
@@ -101,6 +103,23 @@ export const operationsApi = baseApi.injectEndpoints({
         body,
       }),
       invalidatesTags: ["Therapist", "OperationsMetrics", "AuditLog"],
+    }),
+
+    onboardTherapist: builder.mutation<
+      ApiResponse<OnboardTherapistResponse>,
+      OnboardTherapistRequest
+    >({
+      query: (body) => ({
+        url: "/operations/therapists/onboard",
+        method: "POST",
+        body,
+      }),
+      invalidatesTags: [
+        "Therapist",
+        "OperationsMetrics",
+        "AuditLog",
+        "OperationsUser",
+      ],
     }),
 
     listBookingsOperational: builder.query<
@@ -231,6 +250,7 @@ export const {
   useUpdateUserRolesMutation,
   useListTherapistsOperationalQuery,
   useVerifyTherapistMutation,
+  useOnboardTherapistMutation,
   useListBookingsOperationalQuery,
   useListPaymentsOperationalQuery,
   useListLeadsQuery,

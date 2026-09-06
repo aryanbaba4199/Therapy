@@ -10,6 +10,8 @@ from app.common.exceptions.app_exceptions import ForbiddenException
 from app.common.exceptions.error_codes import ErrorCode
 from app.database.mongodb import get_database
 from app.modules.auth.auth_dependency import get_current_active_user
+from app.modules.availability.availability_dependency import get_availability_service
+from app.modules.availability.availability_service import AvailabilityService
 from app.modules.booking.booking_dependency import get_booking_repository
 from app.modules.booking.booking_repository import BookingRepository
 from app.modules.operations.operations_constants import Permission
@@ -43,6 +45,7 @@ def get_operations_service(
     therapist_service: Annotated[TherapistService, Depends(get_therapist_service)],
     booking_repo: Annotated[BookingRepository, Depends(get_booking_repository)],
     payment_repo: Annotated[PaymentRepository, Depends(get_payment_repository)],
+    availability_service: Annotated[AvailabilityService, Depends(get_availability_service)],
 ) -> OperationsService:
     """Provide OperationsService instance."""
     return OperationsService(
@@ -53,6 +56,7 @@ def get_operations_service(
         therapist_service=therapist_service,
         booking_repo=booking_repo,
         payment_repo=payment_repo,
+        availability_service=availability_service,
     )
 
 

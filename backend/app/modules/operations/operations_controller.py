@@ -11,6 +11,8 @@ from app.modules.operations.operations_schema import (
     LeadCreateRequest,
     LeadResponse,
     LeadUpdateRequest,
+    OnboardTherapistRequest,
+    OnboardTherapistResponse,
     OperationUserDetailResponse,
     UpdateUserRolesRequest,
     UpdateUserStatusRequest,
@@ -145,6 +147,18 @@ class OperationsController:
             caller=caller, therapist_id=therapist_id, req=req, request_id=request_id
         )
         return success_response(data=res, message="Therapist status updated")
+
+    async def onboard_therapist(
+        self,
+        caller: UserInDB,
+        req: OnboardTherapistRequest,
+        request_id: str | None,
+    ) -> ApiResponse[OnboardTherapistResponse]:
+        """Onboard a new practitioner with User account and Therapist profile."""
+        res = await self.service.onboard_therapist(
+            caller=caller, req=req, request_id=request_id
+        )
+        return success_response(data=res, message="Therapist successfully onboarded")
 
     async def list_bookings(
         self,

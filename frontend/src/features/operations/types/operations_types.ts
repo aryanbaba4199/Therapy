@@ -133,3 +133,100 @@ export interface PaymentOperationalView {
   failure_message: string | null;
   created_at: string;
 }
+
+// --- Therapist Onboarding Types ---
+
+export interface OnboardTherapistAccountRequest {
+  first_name: string;
+  last_name: string;
+  email: string;
+  phone: string;
+  temporary_password?: string;
+}
+
+export interface OnboardTherapistProfileRequest {
+  display_name?: string;
+  bio: string;
+  designation: string;
+  specialization: string;
+  qualifications: string[];
+  experience_years: number;
+  therapy_hours?: number;
+  languages: string[];
+  expertises: string[];
+  session_modes: string[];
+  profile_image_url?: string;
+  introduction_audio_url?: string;
+}
+
+export interface OnboardTherapistPricingRequest {
+  amount: number;
+  currency?: string;
+  duration_minutes?: number;
+}
+
+export interface OnboardTherapistVerificationRequest {
+  status: string;
+  registration_number?: string;
+  registration_authority?: string;
+  rejection_reason?: string;
+}
+
+export interface OnboardTherapistAvailabilityRequest {
+  timezone: string;
+  days: {
+    day_of_week: number;
+    intervals: {
+      start_time: string;
+      end_time: string;
+      session_modes: string[];
+    }[];
+  }[];
+}
+
+export interface OnboardTherapistRequest {
+  account: OnboardTherapistAccountRequest;
+  profile: OnboardTherapistProfileRequest;
+  pricing: OnboardTherapistPricingRequest;
+  verification: OnboardTherapistVerificationRequest;
+  availability?: OnboardTherapistAvailabilityRequest;
+  status: string;
+}
+
+export interface OnboardTherapistResponse {
+  therapist: {
+    id: string;
+    user_id: string;
+    first_name: string;
+    last_name: string;
+    display_name: string;
+    bio: string;
+    designation: string;
+    specialization: string;
+    qualifications: string[];
+    experience_years: number;
+    therapy_hours: number;
+    languages: string[];
+    expertises: string[];
+    session_modes: string[];
+    pricing: {
+      amount: number;
+      currency: string;
+      duration_minutes: number;
+    };
+    verification: {
+      status: string;
+      verified_at: string | null;
+      rejection_reason: string | null;
+    };
+    status: string;
+    created_at: string;
+  };
+  user_id: string;
+  email: string;
+  phone: string;
+  temporary_password: string | null;
+  status: string;
+  verification_status: string;
+  schedule_configured: boolean;
+}

@@ -48,5 +48,87 @@
     "action": "Action",
     "resource": "Target Resource",
     "metadata": "Details"
+  },
+  "add_therapist": "Add Therapist",
+  "onboarding": {
+    "title": "Therapist Onboarding Wizard",
+    "subtitle": "Provision new clinical practitioners, configure credentials, initial fees, and availability schedules.",
+    "backToList": "Back to Therapists",
+    "steps": {
+      "account": "1. Account",
+      "profile": "2. Profile",
+      "pricing": "3. Consultation",
+      "verification": "4. Credentials",
+      "availability": "5. Availability",
+      "review": "6. Review"
+    },
+    "account": {
+      "title": "Account & Authentication",
+      "firstName": "First Name",
+      "lastName": "Last Name",
+      "email": "Email Address",
+      "phone": "Mobile Number",
+      "autoPassword": "Auto-generate secure temporary password",
+      "customPassword": "Set custom temporary password",
+      "tempPassword": "Temporary Password"
+    },
+    "profile": {
+      "title": "Professional Profile",
+      "displayName": "Display Name",
+      "designation": "Designation",
+      "specialization": "Clinical Specialization",
+      "bio": "Professional Bio",
+      "qualifications": "Qualifications (comma-separated)",
+      "experienceYears": "Experience (Years)",
+      "therapyHours": "Estimated Therapy Hours",
+      "languages": "Languages Spoken (comma-separated)",
+      "expertises": "Areas of Expertise (comma-separated)",
+      "sessionModes": "Session Delivery Modes",
+      "profileImageUrl": "Profile Image URL (optional)"
+    },
+    "pricing": {
+      "title": "Consultation Settings",
+      "amount": "Session Fee (INR)",
+      "duration": "Session Duration (Minutes)"
+    },
+    "verification": {
+      "title": "Credentials & License Verification",
+      "regNumber": "Registration / License Number",
+      "regAuthority": "Registration Authority / Council",
+      "status": "Verification Status",
+      "statusPending": "Pending Verification",
+      "statusVerified": "Verified & Approved"
+    },
+    "availability": {
+      "title": "Initial Availability Schedule",
+      "timezone": "Timezone",
+      "addInterval": "Add Working Slot",
+      "noSlots": "No slots added for this day",
+      "days": {
+        "0": "Sunday",
+        "1": "Monday",
+        "2": "Tuesday",
+        "3": "Wednesday",
+        "4": "Thursday",
+        "5": "Friday",
+        "6": "Saturday"
+      }
+    },
+    "review": {
+      "title": "Review & Complete Onboarding",
+      "draftMode": "Save as Draft",
+      "activateMode": "Create & Activate Immediately",
+      "activationWarning": "Activation requires credentials status to be 'Verified & Approved'.",
+      "submit": "Complete Onboarding",
+      "submitting": "Provisioning Practitioner..."
+    },
+    "success": {
+      "title": "Therapist Successfully Onboarded!",
+      "credentialsNote": "Please share these initial credentials securely with the therapist.",
+      "email": "Email",
+      "tempPassword": "Temporary Password",
+      "status": "Therapist Status",
+      "done": "Done & Return to Therapists"
+    }
   }
 }

@@ -73,8 +73,10 @@ class AuditAction(StrEnum):
 
     USER_STATUS_UPDATED = "user_status_updated"
     USER_ROLES_UPDATED = "user_roles_updated"
+    THERAPIST_CREATED = "therapist_created"
     THERAPIST_VERIFIED = "therapist_verified"
     THERAPIST_STATUS_UPDATED = "therapist_status_updated"
+    THERAPIST_ACTIVATED = "therapist_activated"
     BOOKING_STATUS_UPDATED = "booking_status_updated"
     SUPPORT_TICKET_ASSIGNED = "support_ticket_assigned"
     SUPPORT_TICKET_STATUS_UPDATED = "support_ticket_status_updated"

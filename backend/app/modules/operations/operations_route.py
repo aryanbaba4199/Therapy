@@ -19,6 +19,8 @@ from app.modules.operations.operations_schema import (
     LeadCreateRequest,
     LeadResponse,
     LeadUpdateRequest,
+    OnboardTherapistRequest,
+    OnboardTherapistResponse,
     OperationUserDetailResponse,
     UpdateUserRolesRequest,
     UpdateUserStatusRequest,
@@ -179,6 +181,22 @@ async def update_therapist_status(
 ) -> ApiResponse[TherapistDetailResponse]:
     return await controller.update_therapist_status(
         caller=caller, therapist_id=therapist_id, req=req, request_id=request_id
+    )
+
+
+@router.post(
+    "/therapists/onboard",
+    response_model=ApiResponse[OnboardTherapistResponse],
+    summary="Super Admin: Onboard a new therapist with credentials and initial profile",
+)
+async def onboard_therapist(
+    req: OnboardTherapistRequest,
+    caller: Annotated[UserInDB, Depends(require_permission(Permission.THERAPISTS_MANAGE))],
+    controller: Annotated[OperationsController, Depends(get_operations_controller)],
+    request_id: Annotated[str | None, Depends(get_request_id)] = None,
+) -> ApiResponse[OnboardTherapistResponse]:
+    return await controller.onboard_therapist(
+        caller=caller, req=req, request_id=request_id
     )
 
 

@@ -8,3 +8,4 @@ export * from "./pages/BookingOperationsPage";
 export * from "./pages/PaymentOperationsPage";
 export * from "./pages/FirstResponderDashboardPage";
 export * from "./pages/AuditLogPage";
+export * from "./pages/TherapistOnboardingPage";

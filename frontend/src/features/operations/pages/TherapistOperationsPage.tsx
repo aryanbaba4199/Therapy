@@ -23,8 +23,9 @@ import {
   TextField,
   Typography,
 } from "@mui/material";
-import { FiAward, FiCheck, FiX } from "react-icons/fi";
+import { FiAward, FiCheck, FiPlus, FiX } from "react-icons/fi";
 import { useTranslation } from "react-i18next";
+import { useNavigate } from "react-router-dom";
 import {
   useListTherapistsOperationalQuery,
   useVerifyTherapistMutation,
@@ -32,6 +33,7 @@ import {
 import type { TherapistDetail } from "@/features/therapist/types/therapist.types";
 
 export const TherapistOperationsPage: React.FC = () => {
+  const navigate = useNavigate();
   const { t } = useTranslation(["operations", "therapist", "common"]);
   const [statusFilter, setStatusFilter] = useState<string>("");
   const [verificationFilter, setVerificationFilter] = useState<string>("");
@@ -80,17 +82,28 @@ export const TherapistOperationsPage: React.FC = () => {
 
   return (
     <Container maxWidth="lg" className="py-10 space-y-6">
-      <div>
-        <Typography
-          variant="h4"
-          className="font-extrabold text-neutral-900 tracking-tight"
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+          <Typography
+            variant="h4"
+            className="font-extrabold text-neutral-900 tracking-tight"
+          >
+            {t("operations:therapists")}
+          </Typography>
+          <Typography variant="body1" className="text-neutral-500 mt-1">
+            Review credentials, approve licenses, and manage clinical
+            practitioner statuses.
+          </Typography>
+        </div>
+        <Button
+          variant="contained"
+          color="primary"
+          startIcon={<FiPlus />}
+          onClick={() => navigate("/admin/therapists/new")}
+          className="rounded-xl px-5 py-2.5 font-semibold capitalize shadow-sm"
         >
-          {t("operations:therapists")}
-        </Typography>
-        <Typography variant="body1" className="text-neutral-500 mt-1">
-          Review credentials, approve licenses, and manage clinical practitioner
-          statuses.
-        </Typography>
+          {t("operations:add_therapist", "Add Therapist")}
+        </Button>
       </div>
 
       {/* Filter Toolbar */}
