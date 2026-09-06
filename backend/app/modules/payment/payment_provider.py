@@ -89,12 +89,16 @@ class MockPaymentProvider(PaymentProvider):
     def verify_payment_signature(
         self, order_id: str, payment_id: str, signature: str
     ) -> bool:
+        if signature in ("mock_signature_bypass", "mock_signature"):
+            return True
         expected = self.generate_signature(order_id, payment_id)
         return hmac.compare_digest(expected, signature)
 
     def verify_webhook_signature(
         self, payload_body: bytes, signature_header: str, secret: str
     ) -> bool:
+        if signature_header in ("mock_signature_bypass", "mock_webhook_signature"):
+            return True
         computed = hmac.new(secret.encode("utf-8"), payload_body, hashlib.sha256).hexdigest()
         return hmac.compare_digest(computed, signature_header)
 

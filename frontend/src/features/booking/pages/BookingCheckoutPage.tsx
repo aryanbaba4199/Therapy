@@ -250,9 +250,10 @@ export const BookingCheckoutPage: React.FC = () => {
       const verifyRes = await verifyPayment({
         paymentId: payment.id,
         body: {
-          provider_order_id: payment.provider_order_id,
+          provider_order_id: payment.provider_order_id || "",
           provider_payment_id: dummyPaymentId,
           provider_signature: "mock_signature_bypass",
+          payment_method: paymentMethod,
         },
       }).unwrap();
 

@@ -252,3 +252,57 @@ async def test_package_purchase_and_redemption(client: AsyncClient, mock_db: Any
     # And remaining sessions on user package should now be 2!
     my_pkgs_after = await client.get("/api/v1/packages/my", headers=client_headers)
     assert my_pkgs_after.json()["data"][0]["remaining_sessions"] == 2
+
+
+@pytest.mark.asyncio
+async def test_payment_mock_signature_bypass_and_retry_from_failed(client: AsyncClient, mock_db: Any) -> None:
+    reservation_id, client_token, _ = await _setup_reservation_for_payment(client, mock_db)
+    client_headers = {"Authorization": f"Bearer {client_token}"}
+
+    # 1. Initiate payment
+    init_res = await client.post(
+        "/api/v1/payments",
+        headers=client_headers,
+        json={
+            "target_type": "booking",
+            "target_id": reservation_id,
+            "payment_method": "upi",
+            "idempotency_key": f"mock-idem-{reservation_id}",
+        },
+    )
+    assert init_res.status_code == 201
+    pay_data = init_res.json()["data"]
+    payment_id = pay_data["id"]
+    provider_order_id = pay_data["provider_order_id"]
+
+    # 2. First attempt with invalid signature fails cleanly and transitions to FAILED
+    bad_res = await client.post(
+        f"/api/v1/payments/{payment_id}/verify",
+        headers=client_headers,
+        json={
+            "provider_order_id": provider_order_id,
+            "provider_payment_id": "pay_mock_bad",
+            "provider_signature": "invalid_signature",
+        },
+    )
+    assert bad_res.status_code == 400
+    failed_doc = await mock_db["payments"].find_one({"id": payment_id})
+    assert failed_doc["status"] == "failed"
+
+    # 3. Retry with mock_signature_bypass repairs and marks PAID
+    good_res = await client.post(
+        f"/api/v1/payments/{payment_id}/verify",
+        headers=client_headers,
+        json={
+            "provider_order_id": provider_order_id,
+            "provider_payment_id": "pay_mock_good",
+            "provider_signature": "mock_signature_bypass",
+        },
+    )
+    assert good_res.status_code == 200
+    assert good_res.json()["data"]["status"] == "paid"
+
+    # 4. Verify booking was confirmed
+    confirmed = await mock_db["bookings"].find_one({"reservation_id": reservation_id})
+    assert confirmed is not None
+    assert confirmed["status"] == "confirmed"

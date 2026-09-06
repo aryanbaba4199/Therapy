@@ -94,11 +94,19 @@ class PaymentRepository:
         now = datetime.now(UTC)
         query = {
             "id": payment_id,
-            "status": {"$in": [PaymentStatus.CREATED.value, PaymentStatus.PENDING.value]},
+            "status": {
+                "$in": [
+                    PaymentStatus.CREATED.value,
+                    PaymentStatus.PENDING.value,
+                    PaymentStatus.FAILED.value,
+                ]
+            },
         }
         updates: dict[str, Any] = {
             "status": PaymentStatus.PAID.value,
             "provider_payment_id": provider_payment_id,
+            "failure_code": None,
+            "failure_message": None,
             "paid_at": now,
             "updated_at": now,
         }
