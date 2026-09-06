@@ -174,7 +174,8 @@ export const BookingCheckoutPage: React.FC = () => {
 
       // If package redemption, it's paid immediately with 0 minor amount!
       if (payment.status === "paid") {
-        navigate(`/bookings/confirmation?bookingId=${reservation.id}`);
+        const confirmedBookingId = payment.booking_id || reservation.id;
+        navigate(`/bookings/confirmation?bookingId=${confirmedBookingId}`);
         return;
       }
 
@@ -224,7 +225,8 @@ export const BookingCheckoutPage: React.FC = () => {
               }).unwrap();
 
               if (verifyRes.data) {
-                navigate(`/bookings/confirmation?bookingId=${reservation.id}`);
+                const confirmedBookingId = verifyRes.data.booking_id || reservation.id;
+                navigate(`/bookings/confirmation?bookingId=${confirmedBookingId}`);
               }
             } catch (err: unknown) {
               const errorObj = err as { data?: { message?: string } };
@@ -258,7 +260,8 @@ export const BookingCheckoutPage: React.FC = () => {
       }).unwrap();
 
       if (verifyRes.data) {
-        navigate(`/bookings/confirmation?bookingId=${reservation.id}`);
+        const confirmedBookingId = verifyRes.data.booking_id || reservation.id;
+        navigate(`/bookings/confirmation?bookingId=${confirmedBookingId}`);
       }
     } catch (err: unknown) {
       const errorObj = err as { data?: { message?: string } };

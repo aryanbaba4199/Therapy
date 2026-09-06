@@ -72,6 +72,14 @@ class PaymentService:
             razorpay_account_mode=self.settings.razorpay_account_mode,
         )
 
+    async def _build_payment_response(self, payment: PaymentInDB) -> PaymentResponse:
+        booking_id = None
+        if payment.target_type == PaymentTargetType.BOOKING:
+            booking = await self.booking_repo.get_booking_by_reservation_id(payment.target_id)
+            if booking:
+                booking_id = booking.id
+        return PaymentResponse.from_db(payment, booking_id=booking_id)
+
     async def initiate_payment(
         self, caller: UserInDB, req: CreatePaymentRequest
     ) -> PaymentResponse:
@@ -85,7 +93,7 @@ class PaymentService:
                         message="Idempotency key belongs to another user",
                         code=ErrorCode.PAYMENT_IDEMPOTENCY_CONFLICT,
                     )
-                return PaymentResponse.from_db(existing)
+                return await self._build_payment_response(existing)
 
         # 2. Resolve target and calculate authoritative base price in minor units
         if req.target_type == PaymentTargetType.BOOKING:
@@ -195,7 +203,7 @@ class PaymentService:
             # Fulfill commercial action atomically
             await self._claim_and_fulfill_commercial_transaction(saved.id, caller)
             refreshed = await self.payment_repo.get_by_id(saved.id)
-            return PaymentResponse.from_db(refreshed or saved)
+            return await self._build_payment_response(refreshed or saved)
 
         # 6. Gateway Order generation
         order_res = await self.provider.create_order(
@@ -221,7 +229,7 @@ class PaymentService:
             updated_at=now,
         )
         saved = await self.payment_repo.create_payment(payment)
-        return PaymentResponse.from_db(saved)
+        return await self._build_payment_response(saved)
 
     async def verify_payment(
         self, caller: UserInDB, payment_id: str, req: VerifyPaymentRequest
@@ -251,7 +259,7 @@ class PaymentService:
             if payment.fulfillment_status != FulfillmentStatus.FULFILLED:
                 await self._claim_and_fulfill_commercial_transaction(payment.id, caller)
             refreshed = await self.payment_repo.get_by_id(payment.id)
-            return PaymentResponse.from_db(refreshed or payment)
+            return await self._build_payment_response(refreshed or payment)
 
         # 1. Cryptographic signature check
         is_valid = self.provider.verify_payment_signature(
@@ -284,7 +292,7 @@ class PaymentService:
                 if latest.fulfillment_status != FulfillmentStatus.FULFILLED:
                     await self._claim_and_fulfill_commercial_transaction(latest.id, caller)
                 refreshed = await self.payment_repo.get_by_id(latest.id)
-                return PaymentResponse.from_db(refreshed or latest)
+                return await self._build_payment_response(refreshed or latest)
             raise ConflictException(
                 message="Unable to mark payment as paid due to invalid status transition",
                 code=ErrorCode.CONFLICT,
@@ -293,7 +301,7 @@ class PaymentService:
         # 3. Commercial fulfillment through atomic claim engine
         await self._claim_and_fulfill_commercial_transaction(paid_payment.id, caller)
         refreshed_final = await self.payment_repo.get_by_id(paid_payment.id)
-        return PaymentResponse.from_db(refreshed_final or paid_payment)
+        return await self._build_payment_response(refreshed_final or paid_payment)
 
     async def process_webhook(self, payload_bytes: bytes, signature_header: str) -> bool:
         """Authoritative webhook verification, event deduplication, and atomic fulfillment."""
@@ -506,4 +514,4 @@ class PaymentService:
                 message="Payment belongs to another user",
                 code=ErrorCode.PAYMENT_FORBIDDEN,
             )
-        return PaymentResponse.from_db(payment)
+        return await self._build_payment_response(payment)

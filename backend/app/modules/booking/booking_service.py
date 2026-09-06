@@ -396,6 +396,8 @@ class BookingService:
         """Retrieve booking detail by UUID with authorization."""
         booking = await self.booking_repo.get_booking_by_id(booking_id)
         if not booking:
+            booking = await self.booking_repo.get_booking_by_reservation_id(booking_id)
+        if not booking:
             raise NotFoundException(
                 message="Booking not found",
                 code=ErrorCode.BOOKING_NOT_FOUND,

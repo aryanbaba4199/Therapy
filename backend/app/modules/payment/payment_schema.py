@@ -55,9 +55,10 @@ class PaymentResponse(BaseModel):
     pricing: PaymentPricingSnapshot
     paid_at: datetime | None
     created_at: datetime
+    booking_id: str | None = None
 
     @classmethod
-    def from_db(cls, doc: PaymentInDB) -> "PaymentResponse":
+    def from_db(cls, doc: PaymentInDB, booking_id: str | None = None) -> "PaymentResponse":
         return cls(
             id=doc.id,
             user_id=doc.user_id,
@@ -74,6 +75,7 @@ class PaymentResponse(BaseModel):
             pricing=doc.pricing,
             paid_at=doc.paid_at,
             created_at=doc.created_at,
+            booking_id=booking_id,
         )
 
 

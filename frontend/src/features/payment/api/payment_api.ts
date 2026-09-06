@@ -38,6 +38,7 @@ export interface PaymentResponse {
   status: "created" | "pending" | "paid" | "failed" | "refunded";
   payment_method?: string;
   pricing: PaymentPricingSnapshot;
+  booking_id?: string;
   created_at: string;
   updated_at: string;
 }
