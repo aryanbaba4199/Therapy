@@ -44,7 +44,8 @@ export const TherapistDashboardPage: React.FC = () => {
   const { t } = useTranslation(["session", "common"]);
   const navigate = useNavigate();
 
-  const { data, isLoading, isError, refetch } = useGetTherapistDashboardQuery();
+  const { data, isLoading, isError, error, refetch } =
+    useGetTherapistDashboardQuery();
   const [startSession, { isLoading: isStarting }] = useStartSessionMutation();
   const [completeSession, { isLoading: isCompleting }] =
     useCompleteSessionMutation();
@@ -119,15 +120,51 @@ export const TherapistDashboardPage: React.FC = () => {
   }
 
   if (isError || !dashboard) {
+    const isProfileMissing =
+      (error as { status?: number; data?: { error?: { code?: string } } })
+        ?.status === 403 ||
+      (error as { data?: { error?: { code?: string } } })?.data?.error
+        ?.code === "THERAPIST_NOT_FOUND";
+
     return (
       <Container maxWidth="lg" className="py-12">
-        <Box className="text-center py-16 bg-red-50 rounded-3xl border border-red-100 p-6">
-          <Typography variant="h6" className="text-red-700 font-bold mb-2">
-            Failed to load therapist dashboard
+        <Box className="text-center py-16 bg-neutral-50 rounded-3xl border border-neutral-200 p-8 max-w-xl mx-auto space-y-4">
+          <Typography variant="h6" className="text-neutral-800 font-bold">
+            {isProfileMissing
+              ? "No Active Therapist Profile Found"
+              : "Failed to load therapist dashboard"}
           </Typography>
-          <Button variant="outlined" color="primary" onClick={() => refetch()}>
-            Retry
-          </Button>
+          <Typography variant="body2" className="text-neutral-500">
+            {isProfileMissing
+              ? "Your current user account does not have an active therapist profile attached to it. The Therapist Portal is intended for clinical practitioners."
+              : "An error occurred while loading your daily agenda. Please try again."}
+          </Typography>
+          <Box className="flex justify-center gap-3 pt-2">
+            {isProfileMissing ? (
+              <>
+                <Button
+                  variant="outlined"
+                  onClick={() => navigate("/operations/dashboard")}
+                >
+                  Operations Hub
+                </Button>
+                <Button
+                  variant="contained"
+                  onClick={() => navigate("/admin/therapists/new")}
+                >
+                  Onboard Therapist
+                </Button>
+              </>
+            ) : (
+              <Button
+                variant="outlined"
+                color="primary"
+                onClick={() => refetch()}
+              >
+                Retry
+              </Button>
+            )}
+          </Box>
         </Box>
       </Container>
     );
