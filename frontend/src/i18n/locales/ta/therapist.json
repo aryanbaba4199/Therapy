@@ -52,6 +52,11 @@
     "offline_bangalore": "நேரடி (பெங்களூரு)",
     "offline_kozhikode": "நேரடி (கோழிக்கோடு)"
   },
+  "sessionMode": {
+    "online": "ஆன்லைன் (வீடியோ/ஆடியோ)",
+    "offline_bangalore": "நேரடி (பெங்களூரு)",
+    "offline_kozhikode": "நேரடி (கோழிக்கோடு)"
+  },
   "expertises": {
     "anxiety": "பதட்டம் & பயம்",
     "depression": "மனச்சோர்வு",

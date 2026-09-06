@@ -20,6 +20,10 @@
   "degraded": "Degraded",
   "systemStatus": "System Status",
   "selectLanguage": "Select Language",
+  "edit": "Edit",
+  "today": "Today",
+  "all": "All",
+  "error": "Error",
   "languages": {
     "en": "English",
     "ml": "മലയാളം",

@@ -20,6 +20,10 @@
   "degraded": "തകരാറിൽ",
   "systemStatus": "സിസ്റ്റം നില",
   "selectLanguage": "ഭാഷ തിരഞ്ഞെടുക്കുക",
+  "edit": "മാറ്റുക",
+  "today": "ഇന്ന്",
+  "all": "എല്ലാം",
+  "error": "പിശക്",
   "languages": {
     "en": "English",
     "ml": "മലയാളം",

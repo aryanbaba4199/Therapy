@@ -13,7 +13,7 @@ import {
 } from "@/i18n/config";
 
 export const LanguageSwitcher: React.FC = () => {
-  const { t, i18n } = useTranslation();
+  const { t, i18n } = useTranslation(["common"]);
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const open = Boolean(anchorEl);
 
@@ -38,7 +38,7 @@ export const LanguageSwitcher: React.FC = () => {
       <button
         type="button"
         onClick={handleClick}
-        aria-label={t("common.selectLanguage")}
+        aria-label={t("common:selectLanguage")}
         aria-controls={open ? "language-menu" : undefined}
         aria-haspopup="true"
         aria-expanded={open ? "true" : undefined}
@@ -46,7 +46,7 @@ export const LanguageSwitcher: React.FC = () => {
       >
         <FiGlobe className="w-4 h-4 text-oppam-dark opacity-80" />
         <span className="font-semibold">
-          {t(`common.languages.${currentLang}`)}
+          {t(`common:languages.${currentLang}`)}
         </span>
       </button>
 

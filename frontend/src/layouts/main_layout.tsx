@@ -6,7 +6,7 @@ import { LanguageSwitcher } from "@/common/components/language_switcher";
 import { useAuth } from "@/features/auth/hooks/useAuth";
 
 export const MainLayout: React.FC = () => {
-  const { t } = useTranslation();
+  const { t } = useTranslation(["common", "navigation", "auth"]);
   const { user, isAuthenticated, logout, hasRole } = useAuth();
 
   return (
@@ -21,10 +21,10 @@ export const MainLayout: React.FC = () => {
             </div>
             <div>
               <span className="text-2xl font-black tracking-tight text-oppam-dark block leading-none">
-                {t("common.appName")}
+                {t("common:appName")}
               </span>
               <span className="text-[10px] uppercase font-bold tracking-widest text-gray-500 block mt-0.5">
-                {t("common.onlineTherapy")}
+                {t("common:onlineTherapy")}
               </span>
             </div>
           </Link>
@@ -35,22 +35,22 @@ export const MainLayout: React.FC = () => {
               to="/"
               className="text-sm font-semibold text-gray-700 hover:text-oppam-dark transition-colors"
             >
-              {t("navigation.home")}
+              {t("navigation:home")}
             </Link>
             <Link
               to="/therapists"
               className="text-sm font-semibold text-gray-700 hover:text-oppam-dark transition-colors"
             >
-              {t("navigation.therapists")}
+              {t("navigation:therapists")}
             </Link>
             <span className="text-sm font-semibold text-gray-400 cursor-not-allowed">
-              {t("navigation.services")}
+              {t("navigation:services")}
             </span>
             <span className="text-sm font-semibold text-gray-400 cursor-not-allowed">
-              {t("navigation.concerns")}
+              {t("navigation:concerns")}
             </span>
             <span className="text-sm font-semibold text-gray-400 cursor-not-allowed">
-              {t("navigation.aboutUs")}
+              {t("navigation:aboutUs")}
             </span>
           </nav>
 
@@ -114,14 +114,14 @@ export const MainLayout: React.FC = () => {
                   <span className="w-6 h-6 rounded-full bg-oppam-yellow flex items-center justify-center font-bold text-[10px]">
                     {user?.first_name?.[0]?.toUpperCase() || "U"}
                   </span>
-                  <span>{user?.first_name || t("auth.profile")}</span>
+                  <span>{user?.first_name || t("auth:profile")}</span>
                 </Link>
                 <button
                   type="button"
                   onClick={() => void logout()}
                   className="hidden sm:inline-flex items-center justify-center px-4 py-2 rounded-full border border-gray-300 text-gray-700 hover:bg-gray-50 text-xs font-bold tracking-wider transition-colors"
                 >
-                  {t("auth.logout")}
+                  {t("auth:logout")}
                 </button>
               </div>
             ) : (
@@ -129,7 +129,7 @@ export const MainLayout: React.FC = () => {
                 to="/login"
                 className="hidden sm:inline-flex items-center justify-center px-5 py-2.5 rounded-full bg-oppam-dark text-white hover:bg-neutral-800 text-xs font-bold uppercase tracking-wider transition-colors shadow-sm"
               >
-                {t("auth.login")}
+                {t("auth:login")}
               </Link>
             )}
           </div>
@@ -146,48 +146,48 @@ export const MainLayout: React.FC = () => {
         <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-8">
           <div>
             <h3 className="text-xl font-bold text-oppam-dark mb-2">
-              {t("common.appName")}
+              {t("common:appName")}
             </h3>
             <p className="text-sm text-neutral-800 font-medium max-w-sm">
-              {t("common.tagline")}
+              {t("common:tagline")}
             </p>
           </div>
 
           <div>
             <h4 className="text-xs uppercase font-bold tracking-widest text-oppam-dark mb-3 flex items-center gap-1.5">
               <FiMapPin className="w-4 h-4" />
-              {t("common.footer.addressTitle")}
+              {t("common:footer.addressTitle")}
             </h4>
             <address className="not-italic text-sm text-neutral-800 leading-relaxed font-medium">
-              {t("common.footer.address")}
+              {t("common:footer.address")}
             </address>
           </div>
 
           <div>
             <h4 className="text-xs uppercase font-bold tracking-widest text-oppam-dark mb-3">
-              {t("common.footer.contact")}
+              {t("common:footer.contact")}
             </h4>
             <div className="space-y-2 text-sm font-semibold text-oppam-dark">
               <a
-                href={`tel:${t("common.footer.phone")}`}
+                href={`tel:${t("common:footer.phone")}`}
                 className="flex items-center gap-2 hover:opacity-80 transition-opacity"
               >
                 <FiPhone className="w-4 h-4" />
-                {t("common.footer.phone")}
+                {t("common:footer.phone")}
               </a>
               <a
-                href={`mailto:${t("common.footer.email")}`}
+                href={`mailto:${t("common:footer.email")}`}
                 className="flex items-center gap-2 hover:opacity-80 transition-opacity"
               >
                 <FiMail className="w-4 h-4" />
-                {t("common.footer.email")}
+                {t("common:footer.email")}
               </a>
             </div>
           </div>
         </div>
 
         <div className="max-w-7xl mx-auto mt-8 pt-6 border-t border-amber-300/80 text-center text-xs font-medium text-neutral-700">
-          {t("common.footer.copyright")}
+          {t("common:footer.copyright")}
         </div>
       </footer>
     </div>

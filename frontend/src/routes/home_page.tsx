@@ -4,7 +4,7 @@ import { FiCheckCircle, FiClock, FiUsers, FiActivity } from "react-icons/fi";
 import { useGetHealthQuery } from "@/store/api/health_api";
 
 export const HomePage: React.FC = () => {
-  const { t } = useTranslation();
+  const { t } = useTranslation(["common"]);
   const { data: healthResp, isLoading } = useGetHealthQuery();
 
   const isHealthy = healthResp?.data?.status === "healthy";
@@ -15,15 +15,15 @@ export const HomePage: React.FC = () => {
       <section className="bg-[#FECF2D] py-20 px-4 sm:px-6 lg:px-8 border-b border-amber-300">
         <div className="max-w-5xl mx-auto text-center space-y-6">
           <span className="inline-block text-sm uppercase font-extrabold tracking-widest text-neutral-800 bg-white/70 backdrop-blur-sm px-4 py-1.5 rounded-full shadow-xs">
-            {t("common.onlineTherapy")}
+            {t("common:onlineTherapy")}
           </span>
 
           <h1 className="text-4xl sm:text-6xl font-black text-oppam-dark tracking-tight leading-tight">
-            {t("common.therapyHours")}
+            {t("common:therapyHours")}
           </h1>
 
           <p className="text-lg sm:text-xl font-medium text-neutral-800 max-w-2xl mx-auto">
-            {t("common.tagline")}
+            {t("common:tagline")}
           </p>
 
           <div className="pt-4 flex flex-wrap items-center justify-center gap-4">
@@ -31,14 +31,14 @@ export const HomePage: React.FC = () => {
               type="button"
               className="px-8 py-3.5 rounded-full bg-oppam-dark text-white hover:bg-neutral-800 font-bold text-sm tracking-wider uppercase transition-all shadow-md hover:shadow-lg active:scale-98"
             >
-              {t("common.consultTherapist")}
+              {t("common:consultTherapist")}
             </button>
 
             <button
               type="button"
               className="px-8 py-3.5 rounded-full bg-white text-oppam-dark hover:bg-gray-50 border border-gray-200 font-bold text-sm tracking-wider uppercase transition-all shadow-xs"
             >
-              {t("common.bookNow")}
+              {t("common:bookNow")}
             </button>
           </div>
         </div>
@@ -54,10 +54,10 @@ export const HomePage: React.FC = () => {
             </div>
             <div>
               <h3 className="text-lg font-bold text-oppam-dark">
-                {t("common.therapyHours")}
+                {t("common:therapyHours")}
               </h3>
               <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mt-0.5">
-                {t("common.onlineTherapy")}
+                {t("common:onlineTherapy")}
               </p>
             </div>
           </div>
@@ -69,10 +69,10 @@ export const HomePage: React.FC = () => {
             </div>
             <div>
               <h3 className="text-lg font-bold text-oppam-dark">
-                {t("common.verifiedTherapists")}
+                {t("common:verifiedTherapists")}
               </h3>
               <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mt-0.5">
-                {t("common.tagline")}
+                {t("common:tagline")}
               </p>
             </div>
           </div>
@@ -97,7 +97,7 @@ export const HomePage: React.FC = () => {
             <div className="min-w-0 flex-1">
               <div className="flex items-center justify-between gap-2">
                 <h3 className="text-lg font-bold text-oppam-dark">
-                  {t("common.systemStatus")}
+                  {t("common:systemStatus")}
                 </h3>
                 <span
                   className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${
@@ -107,16 +107,16 @@ export const HomePage: React.FC = () => {
                   }`}
                 >
                   {isLoading
-                    ? t("common.loading")
+                    ? t("common:loading")
                     : isHealthy
-                      ? t("common.healthy")
-                      : t("common.degraded")}
+                      ? t("common:healthy")
+                      : t("common:degraded")}
                 </span>
               </div>
               <p className="text-xs font-semibold text-gray-500 mt-1 truncate">
                 {healthResp?.data?.version
                   ? `v${healthResp.data.version} (${healthResp.data.environment})`
-                  : t("common.tagline")}
+                  : t("common:tagline")}
               </p>
             </div>
           </div>

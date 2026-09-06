@@ -52,6 +52,11 @@
     "offline_bangalore": "In-Person (Bangalore)",
     "offline_kozhikode": "In-Person (Kozhikode)"
   },
+  "sessionMode": {
+    "online": "Online Video/Audio",
+    "offline_bangalore": "In-Person (Bangalore)",
+    "offline_kozhikode": "In-Person (Kozhikode)"
+  },
   "expertises": {
     "anxiety": "Anxiety & Panic",
     "depression": "Depression & Low Mood",

@@ -52,6 +52,11 @@
     "offline_bangalore": "നേരിട്ട് (ബെംഗളൂരു)",
     "offline_kozhikode": "നേരിട്ട് (കോഴിക്കോട്)"
   },
+  "sessionMode": {
+    "online": "ഓൺലൈൻ (വീഡിയോ/ഓഡിയോ)",
+    "offline_bangalore": "നേരിട്ട് (ബെംഗളൂരു)",
+    "offline_kozhikode": "നേരിട്ട് (കോഴിക്കോട്)"
+  },
   "expertises": {
     "anxiety": "ഉത്കണ്ഠയും ഭയവും",
     "depression": "വിഷാദം & മൂഡ് പ്രശ്നങ്ങൾ",

@@ -120,6 +120,18 @@ void i18n
     react: {
       useSuspense: false,
     },
+    parseMissingKeyHandler: (key: string, defaultValue?: string): string => {
+      // Support dot-notation namespace fallback (e.g. "common.appName" -> "common:appName")
+      const dotIndex = key.indexOf(".");
+      if (dotIndex !== -1) {
+        const candidateNs = key.slice(0, dotIndex);
+        const rest = key.slice(dotIndex + 1);
+        if ((NAMESPACES as readonly string[]).includes(candidateNs)) {
+          return i18n.t(`${candidateNs}:${rest}`, { defaultValue });
+        }
+      }
+      return defaultValue ?? key;
+    },
   });
 
 export default i18n;
