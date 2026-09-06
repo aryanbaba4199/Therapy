@@ -361,8 +361,7 @@ class BookingService:
 
         # 6. Create scheduled session idempotently
         if self.session_service:
-            with contextlib.suppress(Exception):
-                await self.session_service.create_session_for_booking(saved_booking)
+            await self.session_service.create_session_for_booking(saved_booking)
 
         return BookingDetailResponse.from_db(saved_booking)
 

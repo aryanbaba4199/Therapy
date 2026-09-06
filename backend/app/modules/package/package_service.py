@@ -106,7 +106,9 @@ class PackageService:
         pkgs = await self.package_repo.get_active_usable_packages(user_id)
         return [UserPackageResponse.from_db(p) for p in pkgs]
 
-    async def consume_session_for_booking(self, user_pkg_id: str, user_id: str) -> bool:
+    async def consume_session_for_booking(
+        self, user_pkg_id: str, user_id: str, payment_id: str | None = None
+    ) -> bool:
         """Atomically consume one session credit for consultation."""
         pkg = await self.package_repo.get_user_package_by_id(user_pkg_id)
         if not pkg or pkg.user_id != user_id:
@@ -122,6 +124,10 @@ class PackageService:
                 code=ErrorCode.PACKAGE_EXPIRED,
             )
 
+        # If this payment already consumed credit, return True
+        if payment_id and payment_id in pkg.consumed_payment_ids:
+            return True
+
         if pkg.remaining_sessions <= 0:
             raise BadRequestException(
                 message="No remaining sessions available in this package",
@@ -129,7 +135,7 @@ class PackageService:
             )
 
         success = await self.package_repo.consume_session_atomic(
-            user_pkg_id=user_pkg_id, user_id=user_id
+            user_pkg_id=user_pkg_id, user_id=user_id, payment_id=payment_id
         )
         if not success:
             raise BadRequestException(

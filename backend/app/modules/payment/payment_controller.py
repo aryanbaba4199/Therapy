@@ -5,6 +5,7 @@ from fastapi import Request
 from app.common.responses.api_response import ApiResponse, success_response
 from app.modules.payment.payment_schema import (
     CreatePaymentRequest,
+    PaymentConfigResponse,
     PaymentResponse,
     VerifyPaymentRequest,
 )
@@ -17,6 +18,10 @@ class PaymentController:
 
     def __init__(self, service: PaymentService) -> None:
         self.service = service
+
+    def get_public_config(self) -> ApiResponse[PaymentConfigResponse]:
+        config = self.service.get_public_config()
+        return success_response(data=config)
 
     async def initiate_payment(
         self, caller: UserInDB, req: CreatePaymentRequest
@@ -38,7 +43,10 @@ class PaymentController:
 
     async def process_webhook(self, request: Request) -> ApiResponse[dict[str, bool]]:
         body = await request.body()
-        sig = request.headers.get("X-Payment-Signature", "")
+        sig = (
+            request.headers.get("X-Razorpay-Signature")
+            or request.headers.get("X-Payment-Signature")
+            or ""
+        )
         handled = await self.service.process_webhook(payload_bytes=body, signature_header=sig)
         return success_response(data={"processed": handled})
-

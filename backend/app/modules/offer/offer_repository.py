@@ -1,4 +1,4 @@
-"""MongoDB repository for Offers and Coupon management."""
+"""MongoDB repository for Offers, Coupon management, and Redemptions."""
 
 from datetime import UTC, datetime
 from typing import Any
@@ -10,11 +10,12 @@ from app.modules.offer.offer_model import OfferInDB
 
 
 class OfferRepository:
-    """Repository accessing `offers` collection."""
+    """Repository accessing `offers` and `offer_redemptions` collections."""
 
     def __init__(self, db: AsyncIOMotorDatabase[dict[str, Any]]) -> None:
         self.db = db
         self.offers: AsyncIOMotorCollection[dict[str, Any]] = db["offers"]
+        self.redemptions: AsyncIOMotorCollection[dict[str, Any]] = db["offer_redemptions"]
 
     async def ensure_indexes(self) -> None:
         """Create indexes for fast lookup and unique coupon codes."""
@@ -24,6 +25,15 @@ class OfferRepository:
                 [("is_active", ASCENDING), ("valid_from", ASCENDING), ("valid_until", ASCENDING)],
                 name="idx_offer_validity",
             ),
+        ])
+
+        await self.redemptions.create_indexes([
+            IndexModel(
+                [("offer_id", ASCENDING), ("payment_id", ASCENDING)],
+                unique=True,
+                name="idx_offer_redemptions_offer_payment_unique",
+            ),
+            IndexModel([("user_id", ASCENDING)], name="idx_offer_redemptions_user"),
         ])
 
     async def create_offer(self, offer: OfferInDB) -> OfferInDB:
@@ -53,9 +63,31 @@ class OfferRepository:
         return [OfferInDB(**d) for d in docs]
 
     async def increment_usage_atomic(
-        self, offer_id: str, user_id: str, per_user_limit: int, usage_limit: int | None
+        self,
+        offer_id: str,
+        user_id: str,
+        per_user_limit: int,
+        usage_limit: int | None,
+        payment_id: str | None = None,
     ) -> bool:
-        """Atomically record coupon usage respecting global and per-user limits."""
+        """Atomically record coupon usage respecting global and per-user limits, idempotent per payment_id."""
+        now = datetime.now(UTC)
+        if payment_id:
+            # Check if this payment already redeemed this offer
+            existing = await self.redemptions.find_one({"offer_id": offer_id, "payment_id": payment_id})
+            if existing:
+                return True
+            try:
+                await self.redemptions.insert_one({
+                    "offer_id": offer_id,
+                    "payment_id": payment_id,
+                    "user_id": user_id,
+                    "redeemed_at": now,
+                })
+            except Exception:
+                # Concurrent duplicate redemption for same payment
+                return True
+
         query: dict[str, Any] = {
             "id": offer_id,
             "is_active": True,
@@ -64,7 +96,6 @@ class OfferRepository:
         if usage_limit is not None:
             query["current_usage"] = {"$lt": usage_limit}
 
-        # Also permit if user hasn't redeemed before
         fallback_query: dict[str, Any] = {
             "id": offer_id,
             "is_active": True,

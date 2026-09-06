@@ -167,11 +167,19 @@ class AuthService:
     async def send_otp(self, req: SendOtpRequest) -> SendOtpResponse:
         """Dispatch a 4-digit numeric OTP to the specified phone number."""
         phone = req.phone
-        latest_otp = await self.auth_repo.get_latest_otp(phone)
         now = utc_now()
+        cooldown_delta = timedelta(seconds=self.settings.otp_resend_cooldown_seconds)
+        cooldown_until = now + cooldown_delta
 
-        if latest_otp and now < latest_otp.cooldown_until:
-            wait_seconds = int((latest_otp.cooldown_until - now).total_seconds()) + 1
+        # Atomic reservation of cooldown slot
+        reserved = await self.auth_repo.atomic_reserve_otp_slot(phone, cooldown_until)
+        if not reserved:
+            latest_otp = await self.auth_repo.get_latest_otp(phone)
+            wait_seconds = (
+                int((latest_otp.cooldown_until - now).total_seconds()) + 1
+                if latest_otp and latest_otp.cooldown_until > now
+                else self.settings.otp_resend_cooldown_seconds
+            )
             raise RateLimitedException(
                 message=f"Please wait {wait_seconds} seconds before requesting a new OTP code",
                 code=ErrorCode.AUTH_OTP_RATE_LIMITED,
@@ -180,7 +188,6 @@ class AuthService:
 
         otp_code = generate_secure_otp(length=self.settings.otp_length)
         otp_hash = hash_otp(otp_code, self.settings.jwt_secret_key)
-        cooldown_delta = timedelta(seconds=self.settings.otp_resend_cooldown_seconds)
         expires_delta = timedelta(seconds=self.settings.otp_expire_seconds)
 
         otp_doc = OtpDocument(
@@ -190,13 +197,16 @@ class AuthService:
             channel=req.channel,
             status=OtpStatus.PENDING,
             attempts=0,
-            cooldown_until=now + cooldown_delta,
+            cooldown_until=cooldown_until,
             expires_at=now + expires_delta,
             created_at=now,
         )
-        await self.auth_repo.create_otp(otp_doc)
-
-        await self.otp_provider.send_otp(phone, otp_code, req.channel)
+        try:
+            await self.auth_repo.create_otp(otp_doc)
+            await self.otp_provider.send_otp(phone, otp_code, req.channel)
+        except Exception:
+            await self.auth_repo.release_otp_cooldown_slot(phone)
+            raise
 
         return SendOtpResponse(
             phone=phone,

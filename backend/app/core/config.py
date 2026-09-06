@@ -63,6 +63,12 @@ class Settings(BaseSettings):
     payment_webhook_secret: str = Field(
         default="mock_webhook_secret_key_therapy_2026", alias="PAYMENT_WEBHOOK_SECRET"
     )
+    razorpay_key_id: str = Field(default="", alias="RAZORPAY_KEY_ID")
+    razorpay_key_secret: str = Field(default="", alias="RAZORPAY_KEY_SECRET")
+    razorpay_webhook_secret: str = Field(default="", alias="RAZORPAY_WEBHOOK_SECRET")
+    razorpay_account_mode: Literal["test", "live"] = Field(
+        default="test", alias="RAZORPAY_ACCOUNT_MODE"
+    )
 
     # Session & Operational Runtime settings
     session_start_window_minutes: int = Field(
@@ -107,7 +113,14 @@ class Settings(BaseSettings):
                 raise ValueError("In production, REFRESH_COOKIE_SECURE must be True.")
             if "*" in self.cors_origins:
                 raise ValueError("In production, CORS_ORIGINS must not contain wildcard '*'.")
-            if self.payment_provider != "mock" and self.payment_webhook_secret == "mock_webhook_secret_key_therapy_2026":
+            if self.payment_provider == "razorpay":
+                if not self.razorpay_key_id or not self.razorpay_key_secret:
+                    raise ValueError("In production with Razorpay, RAZORPAY_KEY_ID and RAZORPAY_KEY_SECRET are required.")
+                if not self.razorpay_webhook_secret:
+                    raise ValueError("In production with Razorpay, RAZORPAY_WEBHOOK_SECRET is required.")
+                if self.razorpay_account_mode == "live" and self.razorpay_key_id.startswith("rzp_test_"):
+                    raise ValueError("In production live mode, RAZORPAY_KEY_ID cannot use test key prefix.")
+            elif self.payment_provider != "mock" and self.payment_webhook_secret == "mock_webhook_secret_key_therapy_2026":
                 raise ValueError("In production, non-mock PAYMENT_WEBHOOK_SECRET must not use the mock default.")
         return self
 

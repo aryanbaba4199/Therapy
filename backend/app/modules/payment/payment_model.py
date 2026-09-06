@@ -46,12 +46,16 @@ class PaymentInDB(BaseModel):
     idempotency_key: str | None = Field(default=None, description="Unique client idempotency token")
     failure_code: str | None = Field(default=None)
     failure_message: str | None = Field(default=None)
+    processing_started_at: datetime | None = Field(default=None, description="Timestamp when worker claimed fulfillment")
+    processing_attempt: int = Field(default=0, description="Number of fulfillment attempts")
+    processing_worker: str | None = Field(default=None, description="Worker ID currently claiming fulfillment")
+    last_fulfillment_error: str | None = Field(default=None, description="Error message from failed fulfillment attempt")
     metadata: dict[str, Any] = Field(default_factory=dict)
     paid_at: datetime | None = Field(default=None)
     created_at: datetime = Field(default_factory=utc_now)
     updated_at: datetime = Field(default_factory=utc_now)
 
-    @field_validator("paid_at", "created_at", "updated_at", mode="after")
+    @field_validator("paid_at", "created_at", "updated_at", "processing_started_at", mode="after")
     @classmethod
     def ensure_tz(cls, v: datetime | None) -> datetime | None:
         return ensure_utc(v) if v is not None else None

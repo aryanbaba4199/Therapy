@@ -3,6 +3,8 @@
 import uuid
 from datetime import UTC, datetime, timedelta
 
+from pymongo.errors import DuplicateKeyError
+
 from app.common.exceptions.app_exceptions import (
     BadRequestException,
     ConflictException,
@@ -76,7 +78,13 @@ class SessionService:
             status=SessionStatus.SCHEDULED,
             attendance=AttendanceStatus.UNKNOWN,
         )
-        return await self.session_repo.create_session(session)
+        try:
+            return await self.session_repo.create_session(session)
+        except DuplicateKeyError:
+            existing_after_race = await self.session_repo.get_session_by_booking_id(booking.id)
+            if existing_after_race:
+                return existing_after_race
+            raise
 
     async def get_session(self, session_id: str, caller: UserInDB) -> SessionResponse:
         """Fetch session detail with strict role & ownership checking."""

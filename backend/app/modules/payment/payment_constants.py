@@ -24,6 +24,15 @@ class FulfillmentStatus(StrEnum):
     FAILED = "failed"
 
 
+class WebhookEventStatus(StrEnum):
+    """Lifecycle states of incoming payment webhook events."""
+
+    PENDING = "pending"
+    PROCESSED = "processed"
+    DUPLICATE = "duplicate"
+    FAILED = "failed"
+
+
 class PaymentMethod(StrEnum):
     """Supported transaction methods."""
 

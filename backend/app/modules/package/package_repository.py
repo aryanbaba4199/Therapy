@@ -1,4 +1,4 @@
-"""MongoDB repository for Packages and User Entitlements."""
+"""MongoDB repository for Package products and User entitlements."""
 
 from datetime import UTC, datetime
 from typing import Any
@@ -19,16 +19,17 @@ class PackageRepository:
         self.user_packages: AsyncIOMotorCollection[dict[str, Any]] = db["user_packages"]
 
     async def ensure_indexes(self) -> None:
-        """Initialize database indexes."""
+        """Create indexes for products and user packages."""
         await self.products.create_indexes([
             IndexModel([("id", ASCENDING)], unique=True, name="idx_package_product_id"),
             IndexModel([("is_active", ASCENDING)], name="idx_package_product_active"),
         ])
+
         await self.user_packages.create_indexes([
-            IndexModel([("id", ASCENDING)], unique=True, name="idx_user_package_id"),
+            IndexModel([("id", ASCENDING)], unique=True, name="idx_user_packages_id"),
             IndexModel(
-                [("user_id", ASCENDING), ("status", ASCENDING), ("expires_at", ASCENDING)],
-                name="idx_user_package_user_status",
+                [("user_id", ASCENDING), ("status", ASCENDING)],
+                name="idx_user_packages_user_status",
             ),
             IndexModel(
                 [("payment_id", ASCENDING)],
@@ -37,6 +38,8 @@ class PackageRepository:
                 name="idx_user_packages_payment_id_unique",
             ),
         ])
+
+    # --- Product Catalog Operations ---
 
     async def create_product(self, product: PackageProductInDB) -> PackageProductInDB:
         await self.products.insert_one(product.model_dump())
@@ -51,6 +54,8 @@ class PackageRepository:
         docs = await cursor.to_list(length=100)
         return [PackageProductInDB(**d) for d in docs]
 
+    # --- User Package Entitlement Operations ---
+
     async def create_user_package(self, user_pkg: UserPackageInDB) -> UserPackageInDB:
         await self.user_packages.insert_one(user_pkg.model_dump())
         return user_pkg
@@ -60,42 +65,70 @@ class PackageRepository:
         return UserPackageInDB(**doc) if doc else None
 
     async def get_user_package_by_payment_id(self, payment_id: str) -> UserPackageInDB | None:
-        """Find user package entitlement associated with a specific payment ID."""
         doc = await self.user_packages.find_one({"payment_id": payment_id})
         return UserPackageInDB(**doc) if doc else None
 
     async def list_user_packages(self, user_id: str) -> list[UserPackageInDB]:
-        cursor = self.user_packages.find({"user_id": user_id}).sort("created_at", -1)
+        cursor = self.user_packages.find({"user_id": user_id}).sort("purchased_at", -1)
         docs = await cursor.to_list(length=100)
         return [UserPackageInDB(**d) for d in docs]
 
     async def get_active_usable_packages(self, user_id: str) -> list[UserPackageInDB]:
+        """Query user packages that have remaining sessions and have not expired."""
         now = datetime.now(UTC)
-        cursor = self.user_packages.find({
+        query = {
             "user_id": user_id,
             "status": PackageStatus.ACTIVE.value,
             "remaining_sessions": {"$gt": 0},
             "expires_at": {"$gte": now},
-        }).sort("expires_at", ASCENDING)
+        }
+        cursor = self.user_packages.find(query).sort("expires_at", ASCENDING)
         docs = await cursor.to_list(length=100)
         return [UserPackageInDB(**d) for d in docs]
 
-    async def consume_session_atomic(self, user_pkg_id: str, user_id: str) -> bool:
-        """Atomically decrement remaining_sessions if > 0 and unexpired."""
+    async def consume_session_atomic(
+        self, user_pkg_id: str, user_id: str, payment_id: str | None = None
+    ) -> bool:
+        """Atomically decrement remaining_sessions if > 0 and unexpired, idempotent per payment_id."""
         now = datetime.now(UTC)
-        query = {
+        if payment_id:
+            # Check if this package already consumed credit for this payment_id
+            existing = await self.user_packages.find_one({
+                "id": user_pkg_id,
+                "consumed_payment_ids": payment_id,
+            })
+            if existing:
+                return True
+
+        query: dict[str, Any] = {
             "id": user_pkg_id,
             "user_id": user_id,
             "status": PackageStatus.ACTIVE.value,
             "remaining_sessions": {"$gt": 0},
             "expires_at": {"$gte": now},
         }
-        update = {"$inc": {"remaining_sessions": -1}, "$set": {"updated_at": now}}
+        if payment_id:
+            query["consumed_payment_ids"] = {"$ne": payment_id}
+
+        update: dict[str, Any] = {
+            "$inc": {"remaining_sessions": -1},
+            "$set": {"updated_at": now},
+        }
+        if payment_id:
+            update["$addToSet"] = {"consumed_payment_ids": payment_id}
 
         res = await self.user_packages.find_one_and_update(
             query, update, return_document=True
         )
         if not res:
+            if payment_id:
+                # Check if concurrent update succeeded for this payment
+                already_consumed = await self.user_packages.find_one({
+                    "id": user_pkg_id,
+                    "consumed_payment_ids": payment_id,
+                })
+                if already_consumed:
+                    return True
             return False
 
         # If remaining_sessions hit 0, mark EXHAUSTED

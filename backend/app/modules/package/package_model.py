@@ -48,6 +48,9 @@ class UserPackageInDB(BaseModel):
     purchased_at: datetime = Field(default_factory=utc_now)
     expires_at: datetime = Field(description="Entitlement expiration timestamp in UTC")
     payment_id: str | None = Field(default=None, description="Fulfilling payment ID")
+    consumed_payment_ids: list[str] = Field(
+        default_factory=list, description="Payment IDs for which session credits were deducted"
+    )
     status: PackageStatus = Field(default=PackageStatus.ACTIVE)
     created_at: datetime = Field(default_factory=utc_now)
     updated_at: datetime = Field(default_factory=utc_now)

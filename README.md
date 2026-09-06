@@ -107,3 +107,16 @@ Frontend will be available at `http://localhost:5173`.
      "request_id": "..."
    }
    ```
+
+---
+
+## Database Seeding
+
+To seed the initial Super Admin user:
+
+```bash
+cd backend
+PYTHONPATH=. ./.venv/bin/python scripts/seed_super_admin.py
+# Or using uv:
+# PYTHONPATH=. uv run python scripts/seed_super_admin.py
+```

@@ -1,4 +1,4 @@
-"""API endpoints for Payments and Webhook processing."""
+"""API endpoints for Payments, Configuration, and Webhook processing."""
 
 from fastapi import APIRouter, Depends, Request
 
@@ -8,6 +8,7 @@ from app.modules.payment.payment_controller import PaymentController
 from app.modules.payment.payment_dependency import get_payment_service
 from app.modules.payment.payment_schema import (
     CreatePaymentRequest,
+    PaymentConfigResponse,
     PaymentResponse,
     VerifyPaymentRequest,
 )
@@ -21,6 +22,17 @@ def get_payment_controller(
     service: PaymentService = Depends(get_payment_service),
 ) -> PaymentController:
     return PaymentController(service=service)
+
+
+@router.get(
+    "/config",
+    response_model=ApiResponse[PaymentConfigResponse],
+    summary="Get public payment provider configuration",
+)
+def get_payment_config(
+    controller: PaymentController = Depends(get_payment_controller),
+) -> ApiResponse[PaymentConfigResponse]:
+    return controller.get_public_config()
 
 
 @router.post(
@@ -72,6 +84,18 @@ async def verify_payment(
     summary="Gateway webhook listener for async payment reconciliation",
 )
 async def handle_webhook(
+    request: Request,
+    controller: PaymentController = Depends(get_payment_controller),
+) -> ApiResponse[dict[str, bool]]:
+    return await controller.process_webhook(request)
+
+
+@router.post(
+    "/webhooks/razorpay",
+    response_model=ApiResponse[dict[str, bool]],
+    summary="Razorpay specific webhook listener with raw payload validation",
+)
+async def handle_razorpay_webhook(
     request: Request,
     controller: PaymentController = Depends(get_payment_controller),
 ) -> ApiResponse[dict[str, bool]]:

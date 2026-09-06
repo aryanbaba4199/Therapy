@@ -86,3 +86,11 @@ class WebhookPayload(BaseModel):
     amount_minor: int
     currency: str = "INR"
     status: str
+
+
+class PaymentConfigResponse(BaseModel):
+    """Public payment configuration exposed to authenticated clients."""
+
+    payment_provider: str
+    razorpay_key_id: str
+    razorpay_account_mode: str

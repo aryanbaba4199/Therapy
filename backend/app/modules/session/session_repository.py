@@ -105,9 +105,14 @@ class SessionRepository:
         return SessionInDB(**doc) if doc else None
 
     async def cancel_session(self, session_id: str) -> SessionInDB | None:
+        """Atomically transition session to CANCELLED if SCHEDULED or READY."""
         now = datetime.now(UTC)
+        query = {
+            "id": session_id,
+            "status": {"$in": [SessionStatus.SCHEDULED.value, SessionStatus.READY.value]},
+        }
         doc = await self.sessions.find_one_and_update(
-            {"id": session_id},
+            query,
             {"$set": {"status": SessionStatus.CANCELLED.value, "updated_at": now}},
             return_document=True,
         )

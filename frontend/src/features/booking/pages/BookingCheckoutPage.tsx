@@ -28,13 +28,20 @@ import {
   useGetReservationQuery,
 } from "../api/booking_api";
 import { ReservationTimer } from "../components/ReservationTimer";
+import { useGetMeQuery } from "@/features/auth/api/auth_api";
 import { useGetTherapistQuery } from "@/features/therapist/api/therapist_api";
 import { useValidateOfferMutation } from "@/features/offer/api/offer_api";
 import { useListMyUsablePackagesQuery } from "@/features/package/api/package_api";
 import {
+  useGetPaymentConfigQuery,
   useInitiatePaymentMutation,
   useVerifyPaymentMutation,
 } from "@/features/payment/api/payment_api";
+import type {
+  RazorpayCheckoutOptions,
+  RazorpayFailureResponse,
+  RazorpaySuccessResponse,
+} from "@/features/payment/types/razorpay";
 
 export const BookingCheckoutPage: React.FC = () => {
   const { t } = useTranslation(["booking", "payment", "offer"]);
@@ -82,6 +89,10 @@ export const BookingCheckoutPage: React.FC = () => {
   const { data: usablePackagesData } = useListMyUsablePackagesQuery();
   const usablePackages = usablePackagesData?.data || [];
 
+  const { data: paymentConfigData } = useGetPaymentConfigQuery();
+  const { data: meData } = useGetMeQuery();
+  const currentUser = meData?.data;
+
   const [validateOffer, { isLoading: isValidatingOffer }] =
     useValidateOfferMutation();
   const [initiatePayment, { isLoading: isInitiatingPayment }] =
@@ -114,17 +125,13 @@ export const BookingCheckoutPage: React.FC = () => {
         code: couponInput.trim().toUpperCase(),
         base_amount_minor: basePriceMinor,
       }).unwrap();
-
-      if (res.data) {
-        setAppliedCoupon(couponInput.trim().toUpperCase());
+      if (res.data && res.data.offer_applied) {
+        setAppliedCoupon(res.data.offer_applied.code);
         setDiscountMinor(res.data.discount_amount_minor);
-        setSelectedPackageId(null); // Mutually exclusive with package session
       }
     } catch (err: unknown) {
       const errorObj = err as { data?: { message?: string } };
-      setErrorMessage(
-        errorObj.data?.message || "Invalid or ineligible coupon code"
-      );
+      setErrorMessage(errorObj.data?.message || "Invalid coupon code");
     }
   };
 
@@ -171,18 +178,80 @@ export const BookingCheckoutPage: React.FC = () => {
         return;
       }
 
-      // 2. Client-side verification / Simulated Payment Gateway
-      // For mock provider, we generate the deterministic mock signature:
-      // HMAC-SHA256 of "{provider_order_id}|pay_mock_123" with default webhook secret
-      // Or verify with mock signature
+      // 2. Determine payment provider: Razorpay or Mock
+      const config = paymentConfigData?.data;
+      const isRazorpay =
+        payment.provider === "razorpay" ||
+        config?.payment_provider === "razorpay";
+
+      if (isRazorpay && window.Razorpay) {
+        // Open Razorpay Standard Checkout
+        const keyId = config?.razorpay_key_id || "";
+        const options: RazorpayCheckoutOptions = {
+          key: keyId,
+          amount: payment.amount_minor,
+          currency: payment.currency || "INR",
+          name: "Oppam Counselling",
+          description: `Therapy Consultation with ${therapist?.display_name || "Therapist"}`,
+          order_id: payment.provider_order_id,
+          prefill: {
+            name:
+              `${currentUser?.first_name || ""} ${currentUser?.last_name || ""}`.trim() ||
+              undefined,
+            email: currentUser?.email || undefined,
+            contact: currentUser?.phone || undefined,
+          },
+          theme: {
+            color: "#0d9488", // teal-600
+          },
+          modal: {
+            ondismiss: () => {
+              setErrorMessage(
+                t("payment:paymentCancelled") || "Payment cancelled by user"
+              );
+            },
+          },
+          handler: async (response: RazorpaySuccessResponse) => {
+            try {
+              const verifyRes = await verifyPayment({
+                paymentId: payment.id,
+                body: {
+                  provider_order_id: response.razorpay_order_id,
+                  provider_payment_id: response.razorpay_payment_id,
+                  provider_signature: response.razorpay_signature,
+                  payment_method: paymentMethod,
+                },
+              }).unwrap();
+
+              if (verifyRes.data) {
+                navigate(`/bookings/confirmation?bookingId=${reservation.id}`);
+              }
+            } catch (err: unknown) {
+              const errorObj = err as { data?: { message?: string } };
+              setErrorMessage(
+                errorObj.data?.message || t("payment:paymentFailed")
+              );
+            }
+          },
+        };
+
+        const rzp = new window.Razorpay(options);
+        rzp.on("payment.failed", (response: RazorpayFailureResponse) => {
+          setErrorMessage(
+            response.error.description || t("payment:paymentFailed")
+          );
+        });
+        rzp.open();
+        return;
+      }
+
+      // 3. Fallback / Mock provider simulation
       const dummyPaymentId = `pay_mock_${Date.now().toString().slice(-6)}`;
-      // Calculate HMAC in JS using Web Crypto or send standard verification request
       const verifyRes = await verifyPayment({
         paymentId: payment.id,
         body: {
           provider_order_id: payment.provider_order_id,
           provider_payment_id: dummyPaymentId,
-          // Let verify handler use provider signature or standard flow
           provider_signature: "mock_signature_bypass",
         },
       }).unwrap();

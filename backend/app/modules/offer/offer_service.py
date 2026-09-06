@@ -138,7 +138,9 @@ class OfferService:
             message=f"Coupon '{offer.code}' applied successfully!",
         )
 
-    async def record_usage_atomic(self, offer_id: str, user_id: str) -> bool:
+    async def record_usage_atomic(
+        self, offer_id: str, user_id: str, payment_id: str | None = None
+    ) -> bool:
         """Atomically increment coupon usage upon confirmed payment."""
         offer = await self.offer_repo.get_by_id(offer_id)
         if not offer:
@@ -148,4 +150,5 @@ class OfferService:
             user_id=user_id,
             per_user_limit=offer.per_user_limit,
             usage_limit=offer.usage_limit,
+            payment_id=payment_id,
         )

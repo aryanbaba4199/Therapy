@@ -42,8 +42,20 @@ export interface PaymentResponse {
   updated_at: string;
 }
 
+export interface PaymentConfigResponse {
+  payment_provider: string;
+  razorpay_key_id: string;
+  razorpay_account_mode: string;
+}
+
 export const paymentApi = baseApi.injectEndpoints({
   endpoints: (builder) => ({
+    getPaymentConfig: builder.query<ApiResponse<PaymentConfigResponse>, void>({
+      query: () => ({
+        url: "/payments/config",
+        method: "GET",
+      }),
+    }),
     initiatePayment: builder.mutation<
       ApiResponse<PaymentResponse>,
       CreatePaymentRequest
@@ -77,6 +89,7 @@ export const paymentApi = baseApi.injectEndpoints({
 });
 
 export const {
+  useGetPaymentConfigQuery,
   useInitiatePaymentMutation,
   useVerifyPaymentMutation,
   useGetPaymentQuery,

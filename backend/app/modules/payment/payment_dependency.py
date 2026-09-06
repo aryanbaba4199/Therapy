@@ -14,7 +14,11 @@ from app.modules.offer.offer_dependency import get_offer_service
 from app.modules.offer.offer_service import OfferService
 from app.modules.package.package_dependency import get_package_service
 from app.modules.package.package_service import PackageService
-from app.modules.payment.payment_provider import MockPaymentProvider, PaymentProvider
+from app.modules.payment.payment_provider import (
+    MockPaymentProvider,
+    PaymentProvider,
+    RazorpayPaymentProvider,
+)
 from app.modules.payment.payment_repository import PaymentRepository
 from app.modules.payment.payment_service import PaymentService
 
@@ -28,8 +32,13 @@ def get_payment_repository(
 def get_payment_provider(
     settings: Settings = Depends(get_settings),
 ) -> PaymentProvider:
+    if settings.payment_provider == "razorpay":
+        return RazorpayPaymentProvider(
+            key_id=settings.razorpay_key_id,
+            key_secret=settings.razorpay_key_secret,
+            webhook_secret=settings.razorpay_webhook_secret,
+        )
     return MockPaymentProvider(secret_key=settings.payment_webhook_secret)
-
 
 
 def get_payment_service(

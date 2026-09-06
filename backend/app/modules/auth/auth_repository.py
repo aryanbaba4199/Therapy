@@ -1,5 +1,6 @@
-"""Database repository for OTP records and Refresh Sessions in MongoDB."""
+"""Database repository for OTP records, Cooldowns, and Refresh Sessions in MongoDB."""
 
+from datetime import datetime
 from typing import Any
 
 from motor.motor_asyncio import AsyncIOMotorDatabase
@@ -15,10 +16,12 @@ class AuthRepository:
 
     OTP_COLLECTION = "auth_otps"
     REFRESH_COLLECTION = "auth_refresh_sessions"
+    COOLDOWN_COLLECTION = "auth_otp_cooldowns"
 
     def __init__(self, db: AsyncIOMotorDatabase[dict[str, Any]]) -> None:
         self.otp_coll = db[self.OTP_COLLECTION]
         self.refresh_coll = db[self.REFRESH_COLLECTION]
+        self.cooldown_coll = db[self.COOLDOWN_COLLECTION]
 
     async def ensure_indexes(self) -> None:
         """Create indexes for performance and security lookups."""
@@ -36,6 +39,42 @@ class AuthRepository:
             IndexModel([("expires_at", ASCENDING)], expireAfterSeconds=0, name="idx_refresh_ttl"),
         ]
         await self.refresh_coll.create_indexes(refresh_indexes)
+
+        cooldown_indexes = [
+            IndexModel([("cooldown_until", ASCENDING)], expireAfterSeconds=0, name="idx_cooldown_ttl"),
+        ]
+        await self.cooldown_coll.create_indexes(cooldown_indexes)
+
+    async def atomic_reserve_otp_slot(self, phone: str, cooldown_until: datetime) -> bool:
+        """Atomically reserve OTP issuance slot for a phone number.
+
+        Succeeds only if no cooldown entry exists or existing cooldown_until is in the past.
+        Uses upsert with filter to guarantee exactly one concurrent winner.
+        """
+        now = utc_now()
+        try:
+            res = await self.cooldown_coll.find_one_and_update(
+                {"_id": phone, "cooldown_until": {"$lte": now}},
+                {"$set": {"cooldown_until": cooldown_until, "updated_at": now}},
+                return_document=True,
+            )
+            if res:
+                return True
+
+            # If not updated, try inserting if it doesn't exist at all
+            await self.cooldown_coll.insert_one({
+                "_id": phone,
+                "cooldown_until": cooldown_until,
+                "updated_at": now,
+            })
+            return True
+        except Exception:
+            # DuplicateKeyError or existing cooldown_until is still in the future
+            return False
+
+    async def release_otp_cooldown_slot(self, phone: str) -> None:
+        """Release cooldown slot if challenge creation fails."""
+        await self.cooldown_coll.delete_one({"_id": phone})
 
     async def create_otp(self, doc: OtpDocument) -> OtpDocument:
         """Insert a newly issued OTP record."""

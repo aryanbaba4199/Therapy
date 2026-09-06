@@ -1,6 +1,6 @@
-"""MongoDB repository for Payments and Commercial transactions."""
+"""MongoDB repository for Payments, Commercial transactions, and Webhook Events."""
 
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from typing import Any
 
 from motor.motor_asyncio import AsyncIOMotorCollection, AsyncIOMotorDatabase
@@ -9,17 +9,21 @@ from pymongo import ASCENDING, IndexModel
 from app.modules.payment.payment_constants import (
     FulfillmentStatus,
     PaymentMethod,
+    PaymentProviderName,
     PaymentStatus,
+    WebhookEventStatus,
 )
 from app.modules.payment.payment_model import PaymentInDB
+from app.modules.payment.payment_webhook_model import PaymentWebhookEventInDB
 
 
 class PaymentRepository:
-    """Repository accessing `payments` collection."""
+    """Repository accessing `payments` and `payment_webhook_events` collections."""
 
     def __init__(self, db: AsyncIOMotorDatabase[dict[str, Any]]) -> None:
         self.db = db
         self.payments: AsyncIOMotorCollection[dict[str, Any]] = db["payments"]
+        self.webhook_events: AsyncIOMotorCollection[dict[str, Any]] = db["payment_webhook_events"]
 
     async def ensure_indexes(self) -> None:
         """Initialize database indexes."""
@@ -42,6 +46,20 @@ class PaymentRepository:
                 name="idx_payment_idempotency",
             ),
             IndexModel([("target_id", ASCENDING)], name="idx_payment_target_id"),
+            IndexModel(
+                [("fulfillment_status", ASCENDING), ("processing_started_at", ASCENDING)],
+                name="idx_payment_fulfillment_recovery",
+            ),
+        ])
+
+        await self.webhook_events.create_indexes([
+            IndexModel([("id", ASCENDING)], unique=True, name="idx_webhook_events_id"),
+            IndexModel(
+                [("provider", ASCENDING), ("event_id", ASCENDING)],
+                unique=True,
+                name="idx_webhook_events_provider_event_unique",
+            ),
+            IndexModel([("received_at", ASCENDING)], name="idx_webhook_events_received"),
         ])
 
     async def create_payment(self, payment: PaymentInDB) -> PaymentInDB:
@@ -112,6 +130,82 @@ class PaymentRepository:
         )
         return PaymentInDB(**res) if res else None
 
+    async def claim_fulfillment_ownership(
+        self,
+        payment_id: str,
+        worker_id: str,
+        stale_timeout_seconds: int = 60,
+    ) -> PaymentInDB | None:
+        """Atomically claim commercial fulfillment execution rights.
+
+        Succeeds if:
+        1. status is PAID and fulfillment_status is PENDING or FAILED.
+        2. status is PAID and fulfillment_status is PROCESSING but stale (processing_started_at < now - 60s).
+        """
+        now = datetime.now(UTC)
+        stale_cutoff = now - timedelta(seconds=stale_timeout_seconds)
+
+        query: dict[str, Any] = {
+            "id": payment_id,
+            "status": PaymentStatus.PAID.value,
+            "$or": [
+                {"fulfillment_status": {"$in": [FulfillmentStatus.PENDING.value, FulfillmentStatus.FAILED.value]}},
+                {
+                    "fulfillment_status": FulfillmentStatus.PROCESSING.value,
+                    "processing_started_at": {"$lt": stale_cutoff},
+                },
+            ],
+        }
+
+        update = {
+            "$set": {
+                "fulfillment_status": FulfillmentStatus.PROCESSING.value,
+                "processing_started_at": now,
+                "processing_worker": worker_id,
+                "updated_at": now,
+            },
+            "$inc": {"processing_attempt": 1},
+        }
+
+        res = await self.payments.find_one_and_update(
+            query, update, return_document=True
+        )
+        return PaymentInDB(**res) if res else None
+
+    async def mark_fulfillment_success(self, payment_id: str) -> PaymentInDB | None:
+        """Mark commercial fulfillment as FULFILLED."""
+        now = datetime.now(UTC)
+        res = await self.payments.find_one_and_update(
+            {"id": payment_id},
+            {
+                "$set": {
+                    "fulfillment_status": FulfillmentStatus.FULFILLED.value,
+                    "last_fulfillment_error": None,
+                    "updated_at": now,
+                }
+            },
+            return_document=True,
+        )
+        return PaymentInDB(**res) if res else None
+
+    async def mark_fulfillment_failed(
+        self, payment_id: str, error_message: str
+    ) -> PaymentInDB | None:
+        """Mark commercial fulfillment as FAILED with error message."""
+        now = datetime.now(UTC)
+        res = await self.payments.find_one_and_update(
+            {"id": payment_id},
+            {
+                "$set": {
+                    "fulfillment_status": FulfillmentStatus.FAILED.value,
+                    "last_fulfillment_error": error_message,
+                    "updated_at": now,
+                }
+            },
+            return_document=True,
+        )
+        return PaymentInDB(**res) if res else None
+
     async def update_fulfillment_status(
         self, payment_id: str, status: FulfillmentStatus
     ) -> PaymentInDB | None:
@@ -123,3 +217,48 @@ class PaymentRepository:
             return_document=True,
         )
         return PaymentInDB(**res) if res else None
+
+    # --- Webhook Events Logging & Deduplication ---
+
+    async def record_webhook_event(self, event: PaymentWebhookEventInDB) -> bool:
+        """Atomically record incoming webhook event.
+
+        Returns True if newly inserted, False if duplicate event (already recorded).
+        """
+        try:
+            await self.webhook_events.insert_one(event.model_dump())
+            return True
+        except Exception:
+            # DuplicateKeyError or unique index violation
+            return False
+
+    async def get_webhook_event(
+        self, provider: PaymentProviderName, event_id: str
+    ) -> PaymentWebhookEventInDB | None:
+        doc = await self.webhook_events.find_one({
+            "provider": provider.value if hasattr(provider, "value") else str(provider),
+            "event_id": event_id,
+        })
+        return PaymentWebhookEventInDB(**doc) if doc else None
+
+    async def update_webhook_event_status(
+        self,
+        event_id: str,
+        provider: PaymentProviderName,
+        status: WebhookEventStatus,
+        error_message: str | None = None,
+    ) -> None:
+        now = datetime.now(UTC)
+        updates: dict[str, Any] = {
+            "status": status.value,
+            "processed_at": now,
+        }
+        if error_message:
+            updates["error_message"] = error_message
+        await self.webhook_events.update_one(
+            {
+                "provider": provider.value if hasattr(provider, "value") else str(provider),
+                "event_id": event_id,
+            },
+            {"$set": updates},
+        )
