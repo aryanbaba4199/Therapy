@@ -6,7 +6,11 @@ from typing import Any
 from motor.motor_asyncio import AsyncIOMotorCollection, AsyncIOMotorDatabase
 from pymongo import ASCENDING, IndexModel
 
-from app.modules.payment.payment_constants import PaymentMethod, PaymentStatus
+from app.modules.payment.payment_constants import (
+    FulfillmentStatus,
+    PaymentMethod,
+    PaymentStatus,
+)
 from app.modules.payment.payment_model import PaymentInDB
 
 
@@ -104,6 +108,18 @@ class PaymentRepository:
                     "updated_at": now,
                 }
             },
+            return_document=True,
+        )
+        return PaymentInDB(**res) if res else None
+
+    async def update_fulfillment_status(
+        self, payment_id: str, status: FulfillmentStatus
+    ) -> PaymentInDB | None:
+        """Update commercial fulfillment lifecycle state."""
+        now = datetime.now(UTC)
+        res = await self.payments.find_one_and_update(
+            {"id": payment_id},
+            {"$set": {"fulfillment_status": status.value, "updated_at": now}},
             return_document=True,
         )
         return PaymentInDB(**res) if res else None

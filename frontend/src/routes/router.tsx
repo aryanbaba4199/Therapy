@@ -76,10 +76,6 @@ export const router = createBrowserRouter([
             element: <MyPackagesPage />,
           },
           {
-            path: "therapist/schedule",
-            element: <AvailabilitySchedulePage />,
-          },
-          {
             path: "bookings/checkout",
             element: <BookingCheckoutPage />,
           },
@@ -121,6 +117,10 @@ export const router = createBrowserRouter([
               {
                 path: "therapist/dashboard",
                 element: <TherapistDashboardPage />,
+              },
+              {
+                path: "therapist/schedule",
+                element: <AvailabilitySchedulePage />,
               },
               {
                 path: "therapist/sessions",

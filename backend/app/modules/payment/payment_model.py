@@ -7,6 +7,7 @@ from pydantic import BaseModel, Field, field_validator
 
 from app.common.utils.datetime_utils import ensure_utc, utc_now
 from app.modules.payment.payment_constants import (
+    FulfillmentStatus,
     PaymentMethod,
     PaymentProviderName,
     PaymentStatus,
@@ -35,6 +36,7 @@ class PaymentInDB(BaseModel):
     amount_minor: int = Field(ge=0, description="Payable amount in minor units")
     currency: str = Field(default="INR")
     status: PaymentStatus = Field(default=PaymentStatus.CREATED)
+    fulfillment_status: FulfillmentStatus = Field(default=FulfillmentStatus.PENDING)
     provider: PaymentProviderName = Field(default=PaymentProviderName.MOCK)
     provider_order_id: str | None = Field(default=None, description="Gateway order ID")
     provider_payment_id: str | None = Field(default=None, description="Gateway payment ID")

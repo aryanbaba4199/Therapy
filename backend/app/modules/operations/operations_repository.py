@@ -1,6 +1,4 @@
-"""MongoDB repositories for Audit Logs, Leads, and Operations Metrics aggregation."""
-
-from datetime import datetime, time
+from datetime import UTC, datetime
 from typing import Any
 
 from motor.motor_asyncio import AsyncIOMotorDatabase
@@ -142,17 +140,17 @@ class OperationsRepository:
     async def get_dashboard_metrics(self) -> dict[str, Any]:
         """Aggregate high-level operational statistics using MongoDB queries."""
         now = utc_now()
-        today_start = datetime.combine(now.date(), time.min)
-        today_end = datetime.combine(now.date(), time.max)
+        today_start = datetime(now.year, now.month, now.day, 0, 0, 0, tzinfo=UTC)
+        today_end = datetime(now.year, now.month, now.day, 23, 59, 59, 999999, tzinfo=UTC)
 
         # 1. Today's bookings
         today_bookings = await self.bookings.count_documents(
             {"created_at": {"$gte": today_start, "$lte": today_end}}
         )
 
-        # 2. Upcoming sessions (scheduled or ready, start_at >= now)
+        # 2. Upcoming sessions (scheduled or ready, scheduled_start_at >= now)
         upcoming_sessions = await self.sessions.count_documents(
-            {"status": {"$in": ["scheduled", "ready"]}, "start_at": {"$gte": now}}
+            {"status": {"$in": ["scheduled", "ready"]}, "scheduled_start_at": {"$gte": now}}
         )
 
         # 3. Completed sessions
@@ -172,10 +170,10 @@ class OperationsRepository:
         # 6. Failed payments
         failed_payments = await self.payments.count_documents({"status": "failed"})
 
-        # 7. Total revenue minor (paid payments)
+        # 7. Total revenue minor (paid payments using amount_minor)
         pipeline: list[dict[str, Any]] = [
             {"$match": {"status": "paid"}},
-            {"$group": {"_id": None, "total": {"$sum": "$final_amount_minor"}}},
+            {"$group": {"_id": None, "total": {"$sum": "$amount_minor"}}},
         ]
         rev_res = await self.payments.aggregate(pipeline).to_list(1)
         total_revenue_minor = rev_res[0]["total"] if rev_res else 0

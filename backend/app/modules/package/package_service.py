@@ -3,6 +3,8 @@
 import uuid
 from datetime import UTC, datetime, timedelta
 
+from pymongo.errors import DuplicateKeyError
+
 from app.common.exceptions.app_exceptions import BadRequestException, NotFoundException
 from app.common.exceptions.error_codes import ErrorCode
 from app.common.utils.datetime_utils import utc_now
@@ -57,7 +59,11 @@ class PackageService:
     async def fulfill_package_purchase(
         self, user_id: str, product_id: str, payment_id: str
     ) -> UserPackageInDB:
-        """Called upon verified payment to grant user session entitlement."""
+        """Called upon verified payment to grant user session entitlement. Idempotent per payment_id."""
+        existing = await self.package_repo.get_user_package_by_payment_id(payment_id)
+        if existing:
+            return existing
+
         product = await self.package_repo.get_product_by_id(product_id)
         if not product:
             raise NotFoundException(
@@ -82,7 +88,13 @@ class PackageService:
             created_at=now,
             updated_at=now,
         )
-        return await self.package_repo.create_user_package(user_pkg)
+        try:
+            return await self.package_repo.create_user_package(user_pkg)
+        except DuplicateKeyError:
+            pkg = await self.package_repo.get_user_package_by_payment_id(payment_id)
+            if pkg:
+                return pkg
+            raise
 
     async def list_user_packages(self, user_id: str) -> list[UserPackageResponse]:
         """List all packages owned by a user."""

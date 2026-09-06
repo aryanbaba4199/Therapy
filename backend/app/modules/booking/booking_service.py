@@ -230,9 +230,18 @@ class BookingService:
                 code=ErrorCode.BOOKING_RESERVATION_FORBIDDEN,
             )
 
-        if reservation.status == ReservationStatus.ACTIVE:
-            await self.booking_repo.update_reservation_status(
-                reservation.id, ReservationStatus.CANCELLED
+        updated = await self.booking_repo.transition_reservation_status(
+            reservation_id=reservation.id,
+            from_status=ReservationStatus.ACTIVE,
+            to_status=ReservationStatus.CANCELLED,
+        )
+        if not updated:
+            latest = await self.booking_repo.get_reservation_by_id(reservation.id)
+            if latest and latest.status == ReservationStatus.CANCELLED:
+                return True
+            raise BadRequestException(
+                message=f"Cannot cancel reservation in '{latest.status if latest else 'unknown'}' status",
+                code=ErrorCode.BOOKING_RESERVATION_EXPIRED,
             )
         return True
 
@@ -262,13 +271,31 @@ class BookingService:
         if existing_booking:
             return BookingDetailResponse.from_db(existing_booking)
 
-        # 4. Check reservation state and expiration
+        # 4. Check reservation state and expiration with atomic transition
         now = datetime.now(UTC)
         if reservation.status != ReservationStatus.ACTIVE or reservation.expires_at < now:
             if reservation.status == ReservationStatus.ACTIVE:
                 await self.booking_repo.update_reservation_status(
                     reservation.id, ReservationStatus.EXPIRED
                 )
+            raise BadRequestException(
+                message="Reservation has expired or is no longer active",
+                code=ErrorCode.BOOKING_RESERVATION_EXPIRED,
+            )
+
+        # Atomically transition ACTIVE -> CONVERTED
+        converted = await self.booking_repo.transition_reservation_status(
+            reservation_id=reservation.id,
+            from_status=ReservationStatus.ACTIVE,
+            to_status=ReservationStatus.CONVERTED,
+            require_unexpired=True,
+        )
+        if not converted:
+            existing_booking = await self.booking_repo.get_booking_by_reservation_id(
+                req.reservation_id
+            )
+            if existing_booking:
+                return BookingDetailResponse.from_db(existing_booking)
             raise BadRequestException(
                 message="Reservation has expired or is no longer active",
                 code=ErrorCode.BOOKING_RESERVATION_EXPIRED,
@@ -324,17 +351,15 @@ class BookingService:
         try:
             saved_booking = await self.booking_repo.create_booking(booking)
         except DuplicateKeyError:
+            existing = await self.booking_repo.get_booking_by_reservation_id(reservation.id)
+            if existing:
+                return BookingDetailResponse.from_db(existing)
             raise ConflictException(
                 message="This slot has already been booked",
                 code=ErrorCode.BOOKING_ALREADY_EXISTS,
             ) from None
 
-        # 6. Transition reservation to CONVERTED
-        await self.booking_repo.update_reservation_status(
-            reservation.id, ReservationStatus.CONVERTED
-        )
-
-        # 7. Create scheduled session idempotently
+        # 6. Create scheduled session idempotently
         if self.session_service:
             with contextlib.suppress(Exception):
                 await self.session_service.create_session_for_booking(saved_booking)
@@ -425,6 +450,17 @@ class BookingService:
                 message=f"Cannot cancel a booking in '{booking.status}' status",
                 code=ErrorCode.BOOKING_CANCEL_NOT_ALLOWED,
             )
+
+        # Check linked session status
+        if self.session_service:
+            session = await self.session_service.session_repo.get_session_by_booking_id(booking_id)
+            if session:
+                from app.modules.session.session_constants import SessionStatus
+                if session.status in [SessionStatus.IN_PROGRESS, SessionStatus.COMPLETED]:
+                    raise BadRequestException(
+                        message=f"Cannot cancel booking for a session that is '{session.status.value}'",
+                        code=ErrorCode.BOOKING_CANCEL_NOT_ALLOWED,
+                    )
 
         updated = await self.booking_repo.update_booking_status(
             booking_id=booking_id,

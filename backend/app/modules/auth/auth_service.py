@@ -243,7 +243,12 @@ class AuthService:
                 details={"remaining_attempts": remaining},
             )
 
-        await self.auth_repo.mark_otp_verified(latest_otp.id)
+        consumed = await self.auth_repo.atomic_verify_otp(latest_otp.id)
+        if not consumed:
+            raise BadRequestException(
+                message="No active OTP verification session found. Please request a new code.",
+                code=ErrorCode.AUTH_INVALID_OTP,
+            )
 
         user = await self.user_repo.get_by_phone(phone)
         if not user:
@@ -312,8 +317,10 @@ class AuthService:
                 code=ErrorCode.AUTH_REFRESH_TOKEN_INVALID,
             )
 
-        session = await self.auth_repo.get_refresh_session(jti)
-        if not session or session.is_revoked:
+        # Atomic revocation of old refresh token session (Rotation)
+        revoked = await self.auth_repo.atomic_revoke_refresh_session(jti)
+        if not revoked:
+            session = await self.auth_repo.get_refresh_session(jti)
             if session and session.is_revoked:
                 # Potential token reuse attack! Revoke all sessions for this user
                 logger.warning(
@@ -324,9 +331,6 @@ class AuthService:
                 message="Refresh session has been revoked or expired",
                 code=ErrorCode.AUTH_REFRESH_TOKEN_INVALID,
             )
-
-        # Invalidate old refresh session (Rotation)
-        await self.auth_repo.revoke_refresh_session(jti)
 
         user = await self.user_repo.get_by_id(user_id)
         if not user or user.status != UserStatus.ACTIVE:

@@ -18,6 +18,7 @@ from app.modules.booking.booking_service import BookingService
 from app.modules.offer.offer_service import OfferService
 from app.modules.package.package_service import PackageService
 from app.modules.payment.payment_constants import (
+    FulfillmentStatus,
     PaymentMethod,
     PaymentProviderName,
     PaymentStatus,
@@ -222,8 +223,12 @@ class PaymentService:
                 code=ErrorCode.PAYMENT_FORBIDDEN,
             )
 
-        # Idempotency check: if already verified and paid, return current state
+        # Idempotency check: if already verified, check fulfillment status
         if payment.status == PaymentStatus.PAID:
+            if payment.fulfillment_status != FulfillmentStatus.FULFILLED:
+                await self._fulfill_commercial_transaction(payment, caller)
+                refreshed = await self.payment_repo.get_by_id(payment.id)
+                return PaymentResponse.from_db(refreshed or payment)
             return PaymentResponse.from_db(payment)
 
         # 1. Cryptographic signature check
@@ -254,6 +259,10 @@ class PaymentService:
             # Re-read in case concurrent webhook already marked it paid
             latest = await self.payment_repo.get_by_id(payment.id)
             if latest and latest.status == PaymentStatus.PAID:
+                if latest.fulfillment_status != FulfillmentStatus.FULFILLED:
+                    await self._fulfill_commercial_transaction(latest, caller)
+                    refreshed = await self.payment_repo.get_by_id(latest.id)
+                    return PaymentResponse.from_db(refreshed or latest)
                 return PaymentResponse.from_db(latest)
             raise ConflictException(
                 message="Unable to mark payment as paid due to invalid status transition",
@@ -262,7 +271,8 @@ class PaymentService:
 
         # 3. Commercial fulfillment
         await self._fulfill_commercial_transaction(paid_payment, caller)
-        return PaymentResponse.from_db(paid_payment)
+        refreshed_final = await self.payment_repo.get_by_id(paid_payment.id)
+        return PaymentResponse.from_db(refreshed_final or paid_payment)
 
     async def process_webhook(self, payload_bytes: bytes, signature_header: str) -> bool:
         """Authoritative webhook verification and state convergence."""
@@ -288,6 +298,13 @@ class PaymentService:
             return False
 
         if payment.status == PaymentStatus.PAID:
+            if payment.fulfillment_status != FulfillmentStatus.FULFILLED:
+                user = await self.booking_repo.bookings.database["users"].find_one(
+                    {"id": payment.user_id}
+                )
+                if user:
+                    caller = UserInDB(**user)
+                    await self._fulfill_commercial_transaction(payment, caller)
             return True  # Idempotent return
 
         if event in ("payment.captured", "order.paid", "payment_success"):
@@ -318,32 +335,48 @@ class PaymentService:
         self, payment: PaymentInDB, caller: UserInDB
     ) -> None:
         """Grant commercial asset: confirm booking or allocate user package balance."""
-        # A. Record offer usage if coupon applied
-        if payment.pricing.offer_code:
-            offer = await self.offer_service.offer_repo.get_by_code(payment.pricing.offer_code)
-            if offer:
-                await self.offer_service.record_usage_atomic(offer.id, caller.id)
+        if payment.fulfillment_status == FulfillmentStatus.FULFILLED:
+            return
 
-        # B. Consume package credit if session balance was used
-        if payment.pricing.user_package_id:
-            await self.package_service.consume_session_for_booking(
-                user_pkg_id=payment.pricing.user_package_id, user_id=caller.id
-            )
+        await self.payment_repo.update_fulfillment_status(
+            payment.id, FulfillmentStatus.PROCESSING
+        )
+        try:
+            # A. Record offer usage if coupon applied
+            if payment.pricing.offer_code:
+                offer = await self.offer_service.offer_repo.get_by_code(payment.pricing.offer_code)
+                if offer:
+                    await self.offer_service.record_usage_atomic(offer.id, caller.id)
 
-        # C. Target fulfillment
-        if payment.target_type == PaymentTargetType.BOOKING:
-            # Confirm reservation into booking using Phase 5 service
-            await self.booking_service.confirm_booking(
-                caller=caller,
-                req=ConfirmBookingRequest(reservation_id=payment.target_id),
+            # B. Consume package credit if session balance was used
+            if payment.pricing.user_package_id:
+                await self.package_service.consume_session_for_booking(
+                    user_pkg_id=payment.pricing.user_package_id, user_id=caller.id
+                )
+
+            # C. Target fulfillment
+            if payment.target_type == PaymentTargetType.BOOKING:
+                # Confirm reservation into booking using Phase 5 service
+                await self.booking_service.confirm_booking(
+                    caller=caller,
+                    req=ConfirmBookingRequest(reservation_id=payment.target_id),
+                )
+            elif payment.target_type == PaymentTargetType.PACKAGE:
+                # Allocate user package
+                await self.package_service.fulfill_package_purchase(
+                    user_id=caller.id,
+                    product_id=payment.target_id,
+                    payment_id=payment.id,
+                )
+
+            await self.payment_repo.update_fulfillment_status(
+                payment.id, FulfillmentStatus.FULFILLED
             )
-        elif payment.target_type == PaymentTargetType.PACKAGE:
-            # Allocate user package
-            await self.package_service.fulfill_package_purchase(
-                user_id=caller.id,
-                product_id=payment.target_id,
-                payment_id=payment.id,
+        except Exception:
+            await self.payment_repo.update_fulfillment_status(
+                payment.id, FulfillmentStatus.FAILED
             )
+            raise
 
     async def get_payment(self, caller: UserInDB, payment_id: str) -> PaymentResponse:
         payment = await self.payment_repo.get_by_id(payment_id)

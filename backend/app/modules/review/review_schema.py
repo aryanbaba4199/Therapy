@@ -35,6 +35,7 @@ class ReviewResponse(BaseModel):
 
     @classmethod
     def from_db(cls, doc: ReviewInDB) -> "ReviewResponse":
+        display_name = "Anonymous Client" if doc.is_anonymous else doc.client_display_name
         return cls(
             id=doc.id,
             session_id=doc.session_id,
@@ -43,7 +44,7 @@ class ReviewResponse(BaseModel):
             client_id=doc.client_id,
             rating=doc.rating,
             comment=doc.comment,
-            client_display_name=doc.client_display_name,
+            client_display_name=display_name,
             is_anonymous=doc.is_anonymous,
             status=doc.status,
             created_at=doc.created_at,
@@ -63,12 +64,13 @@ class PublicReviewResponse(BaseModel):
 
     @classmethod
     def from_db(cls, doc: ReviewInDB) -> "PublicReviewResponse":
+        display_name = "Anonymous Client" if doc.is_anonymous else doc.client_display_name
         return cls(
             id=doc.id,
             therapist_id=doc.therapist_id,
             rating=doc.rating,
             comment=doc.comment,
-            client_display_name=doc.client_display_name,
+            client_display_name=display_name,
             created_at=doc.created_at,
         )
 

@@ -21,8 +21,10 @@ class SupportRepository:
     """Repository managing MongoDB operations for support tickets and conversations."""
 
     def __init__(self, db: AsyncIOMotorDatabase[dict[str, Any]]) -> None:
+        self.db = db
         self.tickets_collection = db.get_collection("support_tickets")
         self.messages_collection = db.get_collection("support_messages")
+        self.counters = db.get_collection("counters")
 
     async def create_indexes(self) -> None:
         """Create query performance and uniqueness indexes."""
@@ -68,9 +70,15 @@ class SupportRepository:
         await self.messages_collection.create_indexes(message_indexes)
 
     async def get_next_ticket_number(self) -> str:
-        """Generate human-readable ticket number based on sequence count."""
-        count = await self.tickets_collection.count_documents({})
-        return f"TCK-{10001 + count}"
+        """Generate human-readable ticket number atomically using counters collection."""
+        res = await self.counters.find_one_and_update(
+            {"_id": "support_ticket"},
+            {"$inc": {"seq": 1}},
+            upsert=True,
+            return_document=True,
+        )
+        seq = res.get("seq", 1) if res else 1
+        return f"TCK-{10000 + int(seq)}"
 
     async def create_ticket(self, ticket: SupportTicketInDB) -> SupportTicketInDB:
         """Insert a new support ticket."""

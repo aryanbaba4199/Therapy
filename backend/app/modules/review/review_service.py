@@ -25,6 +25,7 @@ from app.modules.review.review_schema import (
 )
 from app.modules.session.session_constants import SessionStatus
 from app.modules.session.session_repository import SessionRepository
+from app.modules.therapist.therapist_repository import TherapistRepository
 from app.modules.user.user_constants import UserRole
 from app.modules.user.user_model import UserInDB
 
@@ -37,10 +38,12 @@ class ReviewService:
         db: AsyncIOMotorDatabase[dict[str, Any]],
         review_repo: ReviewRepository | None = None,
         session_repo: SessionRepository | None = None,
+        therapist_repo: TherapistRepository | None = None,
     ) -> None:
         self.db = db
         self.review_repo = review_repo or ReviewRepository(db)
         self.session_repo = session_repo or SessionRepository(db)
+        self.therapist_repo = therapist_repo or TherapistRepository(db)
 
     def _generate_safe_display_name(self, caller: UserInDB, is_anonymous: bool) -> str:
         """Construct a privacy-safe display name that never exposes contact info."""
@@ -138,7 +141,19 @@ class ReviewService:
             role in [UserRole.STAFF, UserRole.ADMIN, UserRole.SUPER_ADMIN]
             for role in caller.roles
         )
-        if review.status == ReviewStatus.HIDDEN and not is_staff and review.client_id != caller.id:
+        is_owner = review.client_id == caller.id
+        is_therapist = False
+        therapist = await self.therapist_repo.get_by_id(review.therapist_id)
+        if therapist and therapist.user_id == caller.id:
+            is_therapist = True
+
+        if not is_owner and not is_staff and not is_therapist:
+            raise ForbiddenException(
+                message="You do not have permission to view this review's internal details",
+                code=ErrorCode.FORBIDDEN,
+            )
+
+        if review.status == ReviewStatus.HIDDEN and not is_staff and not is_owner:
             raise NotFoundException(
                 message="This review is hidden.",
                 code=ErrorCode.REVIEW_HIDDEN,

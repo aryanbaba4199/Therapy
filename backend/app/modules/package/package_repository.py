@@ -30,6 +30,12 @@ class PackageRepository:
                 [("user_id", ASCENDING), ("status", ASCENDING), ("expires_at", ASCENDING)],
                 name="idx_user_package_user_status",
             ),
+            IndexModel(
+                [("payment_id", ASCENDING)],
+                unique=True,
+                sparse=True,
+                name="idx_user_packages_payment_id_unique",
+            ),
         ])
 
     async def create_product(self, product: PackageProductInDB) -> PackageProductInDB:
@@ -51,6 +57,11 @@ class PackageRepository:
 
     async def get_user_package_by_id(self, user_pkg_id: str) -> UserPackageInDB | None:
         doc = await self.user_packages.find_one({"id": user_pkg_id})
+        return UserPackageInDB(**doc) if doc else None
+
+    async def get_user_package_by_payment_id(self, payment_id: str) -> UserPackageInDB | None:
+        """Find user package entitlement associated with a specific payment ID."""
+        doc = await self.user_packages.find_one({"payment_id": payment_id})
         return UserPackageInDB(**doc) if doc else None
 
     async def list_user_packages(self, user_id: str) -> list[UserPackageInDB]:

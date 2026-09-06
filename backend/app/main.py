@@ -21,39 +21,46 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     setup_logging()
     logger.info("Initializing Oppam Platform Backend application...")
     await mongo_manager.connect()
+    settings = get_settings()
     if mongo_manager.db is not None:
-        try:
-            from app.modules.auth.auth_repository import AuthRepository
-            from app.modules.availability.availability_repository import AvailabilityRepository
-            from app.modules.booking.booking_repository import BookingRepository
-            from app.modules.offer.offer_repository import OfferRepository
-            from app.modules.operations.operations_repository import OperationsRepository
-            from app.modules.package.package_repository import PackageRepository
-            from app.modules.payment.payment_repository import PaymentRepository
-            from app.modules.review.review_repository import ReviewRepository
-            from app.modules.session.session_repository import SessionRepository
-            from app.modules.support.support_repository import SupportRepository
-            from app.modules.therapist.therapist_repository import TherapistRepository
-            from app.modules.user.user_repository import UserRepository
+        from app.modules.auth.auth_repository import AuthRepository
+        from app.modules.availability.availability_repository import AvailabilityRepository
+        from app.modules.booking.booking_repository import BookingRepository
+        from app.modules.offer.offer_repository import OfferRepository
+        from app.modules.operations.operations_repository import OperationsRepository
+        from app.modules.package.package_repository import PackageRepository
+        from app.modules.payment.payment_repository import PaymentRepository
+        from app.modules.review.review_repository import ReviewRepository
+        from app.modules.session.session_repository import SessionRepository
+        from app.modules.support.support_repository import SupportRepository
+        from app.modules.therapist.therapist_repository import TherapistRepository
+        from app.modules.user.user_repository import UserRepository
 
-            await UserRepository(mongo_manager.db).ensure_indexes()
-            await AuthRepository(mongo_manager.db).ensure_indexes()
-            await TherapistRepository(mongo_manager.db).ensure_indexes()
-            await AvailabilityRepository(mongo_manager.db).ensure_indexes()
-            await BookingRepository(mongo_manager.db).ensure_indexes()
-            await PaymentRepository(mongo_manager.db).ensure_indexes()
-            await OfferRepository(mongo_manager.db).ensure_indexes()
-            await PackageRepository(mongo_manager.db).ensure_indexes()
-            await SessionRepository(mongo_manager.db).create_indexes()
-            await ReviewRepository(mongo_manager.db).create_indexes()
-            await SupportRepository(mongo_manager.db).create_indexes()
-            await OperationsRepository(mongo_manager.db).ensure_indexes()
-            logger.info("Database indexes initialized.")
-
-
-
-        except Exception as exc:
-            logger.warning("Database index creation deferred: %s", exc)
+        index_initializers = [
+            ("UserRepository", UserRepository(mongo_manager.db).ensure_indexes),
+            ("AuthRepository", AuthRepository(mongo_manager.db).ensure_indexes),
+            ("TherapistRepository", TherapistRepository(mongo_manager.db).ensure_indexes),
+            ("AvailabilityRepository", AvailabilityRepository(mongo_manager.db).ensure_indexes),
+            ("BookingRepository", BookingRepository(mongo_manager.db).ensure_indexes),
+            ("PaymentRepository", PaymentRepository(mongo_manager.db).ensure_indexes),
+            ("OfferRepository", OfferRepository(mongo_manager.db).ensure_indexes),
+            ("PackageRepository", PackageRepository(mongo_manager.db).ensure_indexes),
+            ("SessionRepository", SessionRepository(mongo_manager.db).create_indexes),
+            ("ReviewRepository", ReviewRepository(mongo_manager.db).create_indexes),
+            ("SupportRepository", SupportRepository(mongo_manager.db).create_indexes),
+            ("OperationsRepository", OperationsRepository(mongo_manager.db).ensure_indexes),
+        ]
+        for name, init_fn in index_initializers:
+            try:
+                await init_fn()
+            except Exception as exc:
+                if settings.app_env == "production":
+                    logger.critical("Critical database index initialization failed for %s: %s", name, exc)
+                    raise RuntimeError(
+                        f"Critical database index initialization failed for {name}: {exc}"
+                    ) from exc
+                logger.warning("Database index creation deferred for %s: %s", name, exc)
+        logger.info("Database indexes initialized.")
     logger.info("Application startup lifecycle complete.")
 
     yield

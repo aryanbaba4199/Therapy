@@ -3,7 +3,7 @@
 from functools import lru_cache
 from typing import Literal
 
-from pydantic import Field
+from pydantic import Field, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -90,6 +90,26 @@ class Settings(BaseSettings):
 
     # Request ID header name
     request_id_header: str = Field(default="X-Request-ID", alias="REQUEST_ID_HEADER")
+
+    # Trusted reverse proxy IPs
+    trusted_proxies: list[str] = Field(default=["127.0.0.1", "::1"], alias="TRUSTED_PROXIES")
+
+    @model_validator(mode="after")
+    def validate_production_settings(self) -> "Settings":
+        """Fail-closed on insecure configuration in production."""
+        if self.app_env == "production":
+            default_secret = "replace-this-in-production-with-a-secure-secret-key-min-32-chars"
+            if self.jwt_secret_key == default_secret or len(self.jwt_secret_key) < 32:
+                raise ValueError("In production, JWT_SECRET_KEY must be a secure key of at least 32 characters.")
+            if self.debug:
+                raise ValueError("In production, DEBUG must be False.")
+            if not self.refresh_cookie_secure:
+                raise ValueError("In production, REFRESH_COOKIE_SECURE must be True.")
+            if "*" in self.cors_origins:
+                raise ValueError("In production, CORS_ORIGINS must not contain wildcard '*'.")
+            if self.payment_provider != "mock" and self.payment_webhook_secret == "mock_webhook_secret_key_therapy_2026":
+                raise ValueError("In production, non-mock PAYMENT_WEBHOOK_SECRET must not use the mock default.")
+        return self
 
     model_config = SettingsConfigDict(
         env_file=".env",

@@ -194,6 +194,11 @@ class SessionRepository:
         doc = await self.therapy_goals.find_one({"id": goal_id})
         return TherapyGoalInDB(**doc) if doc else None
 
+    async def list_goals_by_session(self, session_id: str) -> list[TherapyGoalInDB]:
+        cursor = self.therapy_goals.find({"session_id": session_id}).sort("created_at", -1)
+        docs = await cursor.to_list(length=100)
+        return [TherapyGoalInDB(**d) for d in docs]
+
     async def list_client_goals(self, client_id: str) -> list[TherapyGoalInDB]:
         cursor = self.therapy_goals.find({"client_id": client_id}).sort("created_at", -1)
         docs = await cursor.to_list(length=100)

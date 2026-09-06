@@ -15,6 +15,15 @@ class PaymentStatus(StrEnum):
     REFUNDED = "refunded"
 
 
+class FulfillmentStatus(StrEnum):
+    """Lifecycle states of post-payment commercial fulfillment."""
+
+    PENDING = "pending"
+    PROCESSING = "processing"
+    FULFILLED = "fulfilled"
+    FAILED = "failed"
+
+
 class PaymentMethod(StrEnum):
     """Supported transaction methods."""
 

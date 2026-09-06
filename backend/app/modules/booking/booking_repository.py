@@ -99,6 +99,25 @@ class BookingRepository:
         )
         return ReservationInDB(**res) if res else None
 
+    async def transition_reservation_status(
+        self,
+        reservation_id: str,
+        from_status: ReservationStatus,
+        to_status: ReservationStatus,
+        require_unexpired: bool = False,
+    ) -> ReservationInDB | None:
+        """Atomically transition reservation status from an expected state."""
+        query: dict[str, Any] = {"id": reservation_id, "status": from_status.value}
+        if require_unexpired:
+            query["expires_at"] = {"$gt": utc_now()}
+
+        res = await self.reservations.find_one_and_update(
+            query,
+            {"$set": {"status": to_status.value, "updated_at": utc_now()}},
+            return_document=True,
+        )
+        return ReservationInDB(**res) if res else None
+
     async def create_booking(self, booking: BookingInDB) -> BookingInDB:
         """Insert new confirmed booking."""
         await self.bookings.insert_one(booking.model_dump())
@@ -186,8 +205,7 @@ class BookingRepository:
             "expires_at": {"$gt": now},
             "start_at": {"$gte": start_range, "$lte": end_range},
         }, {"slot_id": 1})
-        res_docs = await res_cursor.to_list(length=500)
-        for d in res_docs:
+        async for d in res_cursor:
             if "slot_id" in d:
                 slot_ids.add(d["slot_id"])
 
@@ -197,8 +215,7 @@ class BookingRepository:
             "status": {"$in": [BookingStatus.PENDING.value, BookingStatus.CONFIRMED.value]},
             "start_at": {"$gte": start_range, "$lte": end_range},
         }, {"slot_id": 1})
-        book_docs = await book_cursor.to_list(length=500)
-        for d in book_docs:
+        async for d in book_cursor:
             if "slot_id" in d:
                 slot_ids.add(d["slot_id"])
 

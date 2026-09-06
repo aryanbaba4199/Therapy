@@ -4,6 +4,7 @@ from fastapi import APIRouter, Depends, Request, Response
 
 from app.common.responses.api_response import ApiResponse
 from app.core.config import Settings, get_settings
+from app.core.rate_limiter import RateLimiter
 from app.modules.auth.auth_controller import AuthController
 from app.modules.auth.auth_dependency import (
     get_auth_service,
@@ -54,6 +55,7 @@ async def register(
     "/login",
     response_model=ApiResponse[TokenResponse],
     summary="Authenticate with credentials",
+    dependencies=[Depends(RateLimiter(times=10, seconds=60, action="auth_login"))],
 )
 async def login(
     req: LoginRequest,
@@ -69,6 +71,7 @@ async def login(
     "/otp/send",
     response_model=ApiResponse[SendOtpResponse],
     summary="Send OTP verification code to phone number",
+    dependencies=[Depends(RateLimiter(times=5, seconds=60, action="auth_otp_send"))],
 )
 async def send_otp(
     req: SendOtpRequest,
@@ -82,6 +85,7 @@ async def send_otp(
     "/otp/verify",
     response_model=ApiResponse[TokenResponse],
     summary="Verify phone OTP code and login/signup",
+    dependencies=[Depends(RateLimiter(times=10, seconds=60, action="auth_otp_verify"))],
 )
 async def verify_otp(
     req: VerifyOtpRequest,
@@ -97,6 +101,7 @@ async def verify_otp(
     "/refresh",
     response_model=ApiResponse[TokenResponse],
     summary="Rotate refresh token to obtain a fresh access token",
+    dependencies=[Depends(RateLimiter(times=30, seconds=60, action="auth_refresh"))],
 )
 async def refresh_token(
     req: RefreshTokenRequest,

@@ -34,26 +34,82 @@ const rawBaseQuery = fetchBaseQuery({
   },
 });
 
+interface RefreshTokenResponseData {
+  access_token: string;
+  refresh_token?: string;
+  token_type?: string;
+  expires_in?: number;
+}
+
+interface ApiResponseEnvelope<T> {
+  success: boolean;
+  data: T;
+  message?: string;
+}
+
+let refreshPromise: Promise<string | null> | null = null;
+
+const requestNewAccessToken = async (): Promise<string | null> => {
+  try {
+    const response = await fetch(`${API_BASE_URL}/auth/refresh`, {
+      method: "POST",
+      headers: {
+        Accept: "application/json",
+        "Content-Type": "application/json",
+      },
+      credentials: "include",
+    });
+
+    if (!response.ok) {
+      localStorage.removeItem("oppam_access_token");
+      return null;
+    }
+
+    const payload =
+      (await response.json()) as ApiResponseEnvelope<RefreshTokenResponseData>;
+    if (
+      payload.success &&
+      payload.data &&
+      typeof payload.data.access_token === "string"
+    ) {
+      const newToken = payload.data.access_token;
+      localStorage.setItem("oppam_access_token", newToken);
+      return newToken;
+    }
+
+    localStorage.removeItem("oppam_access_token");
+    return null;
+  } catch {
+    localStorage.removeItem("oppam_access_token");
+    return null;
+  }
+};
+
 /**
  * Custom base query wrapper providing reauthentication handling,
- * unified error normalization, and request trace telemetry.
+ * unified error normalization, and single-flight token refresh mutex.
  */
 const baseQueryWithReauth: BaseQueryFn<
   string | FetchArgs,
   unknown,
   FetchBaseQueryError
 > = async (args, api, extraOptions) => {
-  const result = await rawBaseQuery(args, api, extraOptions);
+  let result = await rawBaseQuery(args, api, extraOptions);
 
-  if (result.error) {
-    const status = result.error.status;
+  if (result.error && result.error.status === 401) {
+    const requestUrl = typeof args === "string" ? args : args.url;
+    if (!requestUrl.includes("/auth/refresh")) {
+      if (!refreshPromise) {
+        refreshPromise = requestNewAccessToken().finally(() => {
+          refreshPromise = null;
+        });
+      }
 
-    // Handle 401 Unauthorized for token refresh architecture
-    if (status === 401) {
-      // Re-authentication / refresh token flow placeholder:
-      // In future auth phase: dispatch refreshToken endpoint, retry original query if succeeded.
-      // For now, clear stale token and notify listeners
-      localStorage.removeItem("oppam_access_token");
+      const newToken = await refreshPromise;
+      if (newToken) {
+        // Retry the original query with fresh token
+        result = await rawBaseQuery(args, api, extraOptions);
+      }
     }
   }
 

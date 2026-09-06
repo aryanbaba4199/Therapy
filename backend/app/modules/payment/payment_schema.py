@@ -5,6 +5,7 @@ from datetime import datetime
 from pydantic import BaseModel, Field
 
 from app.modules.payment.payment_constants import (
+    FulfillmentStatus,
     PaymentMethod,
     PaymentProviderName,
     PaymentStatus,
@@ -46,6 +47,7 @@ class PaymentResponse(BaseModel):
     amount_minor: int
     currency: str
     status: PaymentStatus
+    fulfillment_status: FulfillmentStatus = FulfillmentStatus.PENDING
     provider: PaymentProviderName
     provider_order_id: str | None
     provider_payment_id: str | None
@@ -64,6 +66,7 @@ class PaymentResponse(BaseModel):
             amount_minor=doc.amount_minor,
             currency=doc.currency,
             status=doc.status,
+            fulfillment_status=doc.fulfillment_status,
             provider=doc.provider,
             provider_order_id=doc.provider_order_id,
             provider_payment_id=doc.provider_payment_id,

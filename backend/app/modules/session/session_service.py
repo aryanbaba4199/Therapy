@@ -361,7 +361,21 @@ class SessionService:
                 code=ErrorCode.SESSION_GOAL_FORBIDDEN,
             )
 
-        goals = await self.session_repo.list_client_goals(session.client_id)
+        goals = await self.session_repo.list_goals_by_session(session.id)
+        return [TherapyGoalResponse.from_db(g) for g in goals]
+
+    async def list_client_goals(self, client_id: str, caller: UserInDB) -> list[TherapyGoalResponse]:
+        """List all historical therapy goals for a client across all sessions."""
+        is_owner = caller.id == client_id
+        is_staff = any(r in caller.roles for r in [UserRole.ADMIN, UserRole.SUPER_ADMIN, UserRole.STAFF])
+        caller_th_id = await self._get_caller_therapist_id(caller)
+        if not is_owner and not is_staff and not caller_th_id:
+            raise ForbiddenException(
+                message="You do not have permission to view this client's goals",
+                code=ErrorCode.SESSION_GOAL_FORBIDDEN,
+            )
+
+        goals = await self.session_repo.list_client_goals(client_id)
         return [TherapyGoalResponse.from_db(g) for g in goals]
 
     async def update_goal(

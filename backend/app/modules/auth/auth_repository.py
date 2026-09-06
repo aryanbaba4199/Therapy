@@ -74,6 +74,21 @@ class AuthRepository:
             },
         )
 
+    async def atomic_verify_otp(self, otp_id: str) -> bool:
+        """Atomically consume and verify OTP. Only one concurrent request succeeds."""
+        now = utc_now()
+        res = await self.otp_coll.find_one_and_update(
+            {"id": otp_id, "status": OtpStatus.PENDING.value, "expires_at": {"$gt": now}},
+            {
+                "$set": {
+                    "status": OtpStatus.VERIFIED.value,
+                    "verified_at": now,
+                }
+            },
+            return_document=True,
+        )
+        return res is not None
+
     async def create_refresh_session(self, doc: RefreshSessionDocument) -> RefreshSessionDocument:
         """Record a newly minted refresh session."""
         data = doc.model_dump()
@@ -96,6 +111,21 @@ class AuthRepository:
                 }
             },
         )
+
+    async def atomic_revoke_refresh_session(self, jti: str) -> bool:
+        """Atomically revoke a refresh session if active and unexpired. Returns True if successfully revoked."""
+        now = utc_now()
+        res = await self.refresh_coll.find_one_and_update(
+            {"id": jti, "is_revoked": False, "expires_at": {"$gt": now}},
+            {
+                "$set": {
+                    "is_revoked": True,
+                    "revoked_at": now,
+                }
+            },
+            return_document=True,
+        )
+        return res is not None
 
     async def revoke_all_user_refresh_sessions(self, user_id: str) -> None:
         """Revoke all active sessions for a user (e.g. password change or global logout)."""

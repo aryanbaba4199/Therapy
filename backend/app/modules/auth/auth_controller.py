@@ -49,12 +49,12 @@ class AuthController:
         )
 
     def _extract_client_info(self, request: Request) -> tuple[str | None, str | None]:
-        """Extract User-Agent and Client IP from HTTP request."""
+        """Extract User-Agent and Client IP safely from HTTP request."""
+        from app.common.utils.request_utils import get_client_ip
+
         user_agent = request.headers.get("user-agent")
-        ip = request.client.host if request.client else None
-        forwarded_for = request.headers.get("x-forwarded-for")
-        if forwarded_for:
-            ip = forwarded_for.split(",")[0].strip()
+        trusted_proxies = getattr(self.settings, "trusted_proxies", None)
+        ip = get_client_ip(request, trusted_proxies)
         return user_agent, ip
 
     async def register(
