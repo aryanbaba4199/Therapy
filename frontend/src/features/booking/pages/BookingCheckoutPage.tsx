@@ -225,8 +225,11 @@ export const BookingCheckoutPage: React.FC = () => {
               }).unwrap();
 
               if (verifyRes.data) {
-                const confirmedBookingId = verifyRes.data.booking_id || reservation.id;
-                navigate(`/bookings/confirmation?bookingId=${confirmedBookingId}`);
+                const confirmedBookingId =
+                  verifyRes.data.booking_id || reservation.id;
+                navigate(
+                  `/bookings/confirmation?bookingId=${confirmedBookingId}`
+                );
               }
             } catch (err: unknown) {
               const errorObj = err as { data?: { message?: string } };

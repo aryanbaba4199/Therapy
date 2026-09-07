@@ -9,7 +9,14 @@ import {
   Divider,
   Typography,
 } from "@mui/material";
-import { FiCalendar, FiCheck, FiClock, FiList, FiPlus, FiVideo } from "react-icons/fi";
+import {
+  FiCalendar,
+  FiCheck,
+  FiClock,
+  FiList,
+  FiPlus,
+  FiVideo,
+} from "react-icons/fi";
 import { useTranslation } from "react-i18next";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { JoinMeetingButton } from "@/features/session/components/JoinMeetingButton";

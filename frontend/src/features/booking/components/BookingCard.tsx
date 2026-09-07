@@ -80,14 +80,15 @@ export const BookingCard: React.FC<BookingCardProps> = ({
         </Box>
 
         <Box className="flex flex-wrap items-center gap-2.5 self-end md:self-center">
-          {booking.session_mode === "online" && booking.status === "confirmed" && (
-            <JoinMeetingButton
-              sessionId={booking.session_id || ""}
-              sessionMode={booking.session_mode}
-              meeting={booking.meeting}
-              size="small"
-            />
-          )}
+          {booking.session_mode === "online" &&
+            booking.status === "confirmed" && (
+              <JoinMeetingButton
+                sessionId={booking.session_id || ""}
+                sessionMode={booking.session_mode}
+                meeting={booking.meeting}
+                size="small"
+              />
+            )}
 
           {isUpcoming && onCancelClick && (
             <Button
