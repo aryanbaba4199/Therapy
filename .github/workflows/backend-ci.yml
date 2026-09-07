@@ -92,8 +92,38 @@ jobs:
 
       - name: Deploy to Cloud Run
         run: |
-          gcloud run deploy ${{ secrets.CLOUD_RUN_BACKEND_SERVICE_NAME }} \
-            --image "${{ secrets.GCP_REGION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/${{ secrets.GCP_ARTIFACT_REGISTRY }}/${{ secrets.CLOUD_RUN_BACKEND_SERVICE_NAME }}:${{ github.sha }}" \
-            --region ${{ secrets.GCP_REGION }} \
-            --platform managed \
-            --allow-unauthenticated
+          DEPLOY_FLAGS=(
+            "--image=${{ secrets.GCP_REGION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/${{ secrets.GCP_ARTIFACT_REGISTRY }}/${{ secrets.CLOUD_RUN_BACKEND_SERVICE_NAME }}:${{ github.sha }}"
+            "--region=${{ secrets.GCP_REGION }}"
+            "--platform=managed"
+            "--memory=1Gi"
+            "--allow-unauthenticated"
+          )
+
+          if [ -n "${{ secrets.BACKEND_ENV }}" ]; then
+            cat << 'EOF' > parse_env.py
+          import yaml
+
+          env_vars = {}
+          with open("backend.env") as f:
+              for line in f:
+                  line = line.strip()
+                  if not line or line.startswith("#") or "=" not in line:
+                      continue
+                  key, val = line.split("=", 1)
+                  key = key.strip()
+                  val = val.strip("\"'")
+                  env_vars[key] = val
+
+          env_vars.pop("PORT", None)
+
+          with open("env.yaml", "w") as f:
+              yaml.dump(env_vars, f)
+          EOF
+
+            echo "${{ secrets.BACKEND_ENV }}" > backend.env
+            python3 parse_env.py
+            DEPLOY_FLAGS+=("--env-vars-file=env.yaml")
+          fi
+
+          gcloud run deploy ${{ secrets.CLOUD_RUN_BACKEND_SERVICE_NAME }} "${DEPLOY_FLAGS[@]}"
