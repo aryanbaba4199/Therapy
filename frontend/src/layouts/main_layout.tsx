@@ -1,13 +1,25 @@
-import React from "react";
-import { Outlet, Link } from "react-router-dom";
+import React, { useEffect } from "react";
+import { Outlet, Link, useSearchParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { FiPhone, FiMail, FiMapPin, FiHeart } from "react-icons/fi";
 import { LanguageSwitcher } from "@/common/components/language_switcher";
 import { useAuth } from "@/features/auth/hooks/useAuth";
+import { LANGUAGE_STORAGE_KEY, SUPPORTED_LANGUAGES } from "@/i18n/config";
 
 export const MainLayout: React.FC = () => {
-  const { t } = useTranslation(["common", "navigation", "auth"]);
+  const { t, i18n } = useTranslation(["common", "navigation", "auth"]);
   const { user, isAuthenticated, logout, hasRole } = useAuth();
+  const [searchParams] = useSearchParams();
+
+  useEffect(() => {
+    const lng = searchParams.get("lng")?.toLowerCase();
+    if (lng && (SUPPORTED_LANGUAGES as readonly string[]).includes(lng)) {
+      if (i18n.language !== lng) {
+        void i18n.changeLanguage(lng);
+        localStorage.setItem(LANGUAGE_STORAGE_KEY, lng);
+      }
+    }
+  }, [searchParams, i18n]);
 
   return (
     <div className="min-h-screen flex flex-col bg-white text-oppam-black font-sans">

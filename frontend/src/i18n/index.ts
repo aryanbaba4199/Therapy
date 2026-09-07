@@ -110,7 +110,8 @@ void i18n
     defaultNS: DEFAULT_NAMESPACE,
     ns: NAMESPACES,
     detection: {
-      order: ["localStorage", "navigator"],
+      order: ["querystring", "localStorage", "navigator"],
+      lookupQuerystring: "lng",
       lookupLocalStorage: LANGUAGE_STORAGE_KEY,
       caches: ["localStorage"],
     },
