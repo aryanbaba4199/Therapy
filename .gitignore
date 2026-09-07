@@ -21,5 +21,10 @@ build/
 *.log
 .DS_Store
 
+# Coverage artifacts
+.coverage
+htmlcov/
+coverage/
+
 # Research artifacts
 .research/

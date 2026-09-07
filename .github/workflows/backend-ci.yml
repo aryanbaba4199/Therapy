@@ -46,8 +46,8 @@ jobs:
       - name: Type check with MyPy
         run: uv run mypy app tests
 
-      - name: Run Pytest suite
-        run: uv run pytest tests/ -v
+      - name: Run Pytest suite with coverage
+        run: uv run pytest --cov=app --cov-report=term-missing --cov-fail-under=80 tests/ -v
 
   build-and-deploy:
     name: Build & Deploy Backend

@@ -7,6 +7,7 @@ os.environ["APP_ENV"] = "test"
 os.environ["DEBUG"] = "true"
 os.environ["MONGODB_DATABASE"] = "oppam_therapy_test"
 os.environ["PAYMENT_PROVIDER"] = "mock"
+os.environ["JWT_SECRET_KEY"] = "test-jwt-secret-key-that-is-at-least-32-chars-long-for-hmac-sha256"
 
 from collections.abc import AsyncIterator  # noqa: E402
 from typing import Any

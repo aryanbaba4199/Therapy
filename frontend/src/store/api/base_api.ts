@@ -7,12 +7,13 @@ import {
 } from "@reduxjs/toolkit/query/react";
 
 // Dynamic API base URL based on environment
+const rawEnvUrl = import.meta.env.VITE_API_BASE_URL;
 const API_BASE_URL =
-  import.meta.env.VITE_API_BASE_URL !== undefined &&
-  typeof import.meta.env.VITE_API_BASE_URL === "string" &&
-  import.meta.env.VITE_API_BASE_URL.length > 0
-    ? import.meta.env.VITE_API_BASE_URL
-    : "/api/v1";
+  typeof rawEnvUrl === "string" && rawEnvUrl.length > 0
+    ? rawEnvUrl
+    : typeof window !== "undefined" && window.location?.origin
+      ? `${window.location.origin}/api/v1`
+      : "/api/v1";
 
 const rawBaseQuery = fetchBaseQuery({
   baseUrl: API_BASE_URL,

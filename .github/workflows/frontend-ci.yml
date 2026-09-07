@@ -43,6 +43,9 @@ jobs:
       - name: Type check with TypeScript
         run: npm run type-check
 
+      - name: Run Vitest test suite
+        run: npm test
+
       - name: Build production bundle
         run: npm run build
 
