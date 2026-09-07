@@ -52,10 +52,10 @@ jobs:
     if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
     runs-on: ubuntu-latest
     env:
-      GCP_PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
-      GCP_REGION: ${{ secrets.GCP_REGION }}
-      CLOUD_RUN_FRONTEND_SERVICE_NAME: ${{ secrets.CLOUD_RUN_FRONTEND_SERVICE_NAME }}
-      GCP_ARTIFACT_REGISTRY: ${{ secrets.GCP_ARTIFACT_REGISTRY }}
+      GCP_PROJECT_ID: ${{ secrets.GCP_PROJECT_ID || vars.GCP_PROJECT_ID || 'bigdeal-478908' }}
+      GCP_REGION: ${{ secrets.GCP_REGION || vars.GCP_REGION || 'asia-southeast1' }}
+      CLOUD_RUN_FRONTEND_SERVICE_NAME: ${{ secrets.CLOUD_RUN_FRONTEND_SERVICE_NAME || vars.CLOUD_RUN_FRONTEND_SERVICE_NAME || 'frontend' }}
+      GCP_ARTIFACT_REGISTRY: ${{ secrets.GCP_ARTIFACT_REGISTRY || vars.GCP_ARTIFACT_REGISTRY || 'therapy' }}
 
     steps:
       - name: Checkout repository
@@ -69,19 +69,19 @@ jobs:
       - name: Setup gcloud CLI
         uses: google-github-actions/setup-gcloud@v2
         with:
-          project_id: ${{ secrets.GCP_PROJECT_ID }}
+          project_id: ${{ env.GCP_PROJECT_ID }}
 
       - name: Configure Docker authentication
-        run: gcloud auth configure-docker ${{ secrets.GCP_REGION }}-docker.pkg.dev --quiet
+        run: gcloud auth configure-docker ${{ env.GCP_REGION }}-docker.pkg.dev --quiet
 
       - name: Build and Push Docker image
         run: |
-          IMAGE_BASE="${{ secrets.GCP_REGION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/${{ secrets.GCP_ARTIFACT_REGISTRY }}/${{ secrets.CLOUD_RUN_FRONTEND_SERVICE_NAME }}"
+          IMAGE_BASE="${{ env.GCP_REGION }}-docker.pkg.dev/${{ env.GCP_PROJECT_ID }}/${{ env.GCP_ARTIFACT_REGISTRY }}/${{ env.CLOUD_RUN_FRONTEND_SERVICE_NAME }}"
           IMAGE_TAG="${IMAGE_BASE}:${{ github.sha }}"
           IMAGE_LATEST="${IMAGE_BASE}:latest"
 
           docker build \
-            --build-arg VITE_API_BASE_URL="${{ secrets.VITE_API_BASE_URL }}" \
+            --build-arg VITE_API_BASE_URL="${{ secrets.VITE_API_BASE_URL || 'https://backend-69781795636.asia-southeast1.run.app/api/v1' }}" \
             -t "$IMAGE_TAG" \
             -t "$IMAGE_LATEST" \
             ./frontend
@@ -90,8 +90,8 @@ jobs:
 
       - name: Deploy to Cloud Run
         run: |
-          gcloud run deploy ${{ secrets.CLOUD_RUN_FRONTEND_SERVICE_NAME }} \
-            --image "${{ secrets.GCP_REGION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/${{ secrets.GCP_ARTIFACT_REGISTRY }}/${{ secrets.CLOUD_RUN_FRONTEND_SERVICE_NAME }}:${{ github.sha }}" \
-            --region ${{ secrets.GCP_REGION }} \
+          gcloud run deploy ${{ env.CLOUD_RUN_FRONTEND_SERVICE_NAME }} \
+            --image "${{ env.GCP_REGION }}-docker.pkg.dev/${{ env.GCP_PROJECT_ID }}/${{ env.GCP_ARTIFACT_REGISTRY }}/${{ env.CLOUD_RUN_FRONTEND_SERVICE_NAME }}:${{ github.sha }}" \
+            --region ${{ env.GCP_REGION }} \
             --platform managed \
             --allow-unauthenticated
