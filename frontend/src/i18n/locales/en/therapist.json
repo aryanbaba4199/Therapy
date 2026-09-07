@@ -1,6 +1,9 @@
 {
   "title": "Find the Right Therapist",
   "subtitle": "Experienced, compassionate, and verified mental health professionals ready to support your journey.",
+  "featuredTitle": "Book a Session with Verified Therapists",
+  "featuredSubtitle": "Browse licensed counsellors and book your session directly.",
+  "viewAll": "View All Therapists",
   "searchPlaceholder": "Search by therapist name, expertise, or designation...",
   "filters": "Filters",
   "clearFilters": "Clear Filters",
