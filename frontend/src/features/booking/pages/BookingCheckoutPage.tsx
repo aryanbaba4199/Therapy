@@ -192,7 +192,7 @@ export const BookingCheckoutPage: React.FC = () => {
           key: keyId,
           amount: payment.amount_minor,
           currency: payment.currency || "INR",
-          name: "Oppam Counselling",
+          name: "Manaswell",
           description: `Therapy Consultation with ${therapist?.display_name || "Therapist"}`,
           order_id: payment.provider_order_id,
           prefill: {

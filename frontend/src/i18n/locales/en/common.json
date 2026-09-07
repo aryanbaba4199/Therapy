@@ -1,5 +1,5 @@
 {
-  "appName": "Oppam",
+  "appName": "Manaswell",
   "tagline": "Kerala's First 24/7 Online Counselling Platform",
   "bookNow": "Book Now",
   "consultTherapist": "Consult a Therapist",
@@ -30,11 +30,11 @@
     "ta": "தமிழ்"
   },
   "footer": {
-    "copyright": "© 2026 Oppam Wellness Private Ltd. All rights reserved.",
+    "copyright": "© 2026 Manaswell Private Ltd. All rights reserved.",
     "addressTitle": "Headquarters",
     "address": "3rd Floor, Multi Arcade, Mini Bypass Road, Karaparamba, Kozhikode, Kerala 673010",
     "contact": "Contact",
     "phone": "+91 85909 25353",
-    "email": "help@oppam.me"
+    "email": "help@manaswell.com"
   }
 }
